@@ -1,0 +1,103 @@
+import React, { useState } from 'react';
+import { Clock, Users, ChevronDown, ChevronUp, Coffee } from 'lucide-react';
+import { LiberatingStructure } from '../types/Workshop';
+import { getCategoryColor } from '../data/liberatingStructures';
+
+interface StructureCardProps {
+  structure: LiberatingStructure;
+  duration?: number;
+  showDetails?: boolean;
+  isBreak?: boolean;
+}
+
+export const StructureCard: React.FC<StructureCardProps> = ({ 
+  structure, 
+  duration, 
+  showDetails = false,
+  isBreak = false
+}) => {
+  const [isExpanded, setIsExpanded] = useState(false);
+  
+  if (isBreak) {
+    return (
+      <div className="bg-amber-50 rounded-lg shadow-md p-4 border-l-4 border-amber-400">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center">
+            <Coffee className="w-5 h-5 text-amber-600 mr-2" />
+            <h3 className="font-semibold text-amber-800">{structure.name}</h3>
+          </div>
+          {duration && (
+            <div className="text-sm text-amber-700 flex items-center">
+              <Clock className="w-4 h-4 mr-1" />
+              {duration}min
+            </div>
+          )}
+        </div>
+        <p className="text-amber-700 text-sm mt-2">{structure.description}</p>
+      </div>
+    );
+  }
+  
+  return (
+    <div className="bg-white rounded-lg shadow-md hover:shadow-lg transition-all duration-200 p-4 border-l-4 border-blue-500">
+      <div className="flex items-start justify-between mb-3">
+        <div className="flex-1">
+          <h3 className="font-semibold text-gray-900 mb-1">
+            <span className="text-lg mr-2">{structure.icon}</span>
+            {structure.name}
+          </h3>
+          <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${getCategoryColor(structure.category)}`}>
+            {structure.category}
+          </span>
+        </div>
+        {duration && (
+          <div className="text-sm text-gray-600 flex items-center">
+            <Clock className="w-4 h-4 mr-1" />
+            {duration}min
+          </div>
+        )}
+      </div>
+      
+      <p className="text-gray-600 text-sm mb-3">{structure.description}</p>
+      
+      {!showDetails && (
+        <button
+          onClick={() => setIsExpanded(!isExpanded)}
+          className="flex items-center text-blue-600 hover:text-blue-800 text-sm font-medium transition-colors duration-200 mb-3"
+        >
+          {isExpanded ? (
+            <>
+              <ChevronUp className="w-4 h-4 mr-1" />
+              Dölj instruktioner
+            </>
+          ) : (
+            <>
+              <ChevronDown className="w-4 h-4 mr-1" />
+              Visa instruktioner
+            </>
+          )}
+        </button>
+      )}
+      
+      {(isExpanded || showDetails) && (
+        <div className="bg-gray-50 rounded-md p-3 mb-3">
+          <h4 className="font-medium text-gray-900 mb-2">Genomförande:</h4>
+          <p className="text-gray-700 text-sm leading-relaxed">{structure.instructions}</p>
+        </div>
+      )}
+      
+      {showDetails && (
+        <div className="flex items-center justify-between text-xs text-gray-500">
+          <div className="flex items-center">
+            <Users className="w-3 h-3 mr-1" />
+            {structure.minParticipants}-{structure.maxParticipants === 200 ? '200+' : structure.maxParticipants}
+          </div>
+          <div className="flex items-center">
+            <Clock className="w-3 h-3 mr-1" />
+            ~{structure.baseTime}min bas
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
