@@ -9,7 +9,124 @@ const formatMinutesToTime = (minutes: number): string => {
   return `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}`;
 };
 
-export const generateWorkshop = (hours: number, participants: number, purposes: string[]): Workshop => {
+const getPhaseForActivity = (activityIndex: number, totalActivities: number, activityId: string): 'Open' | 'Diverge' | 'Explore' | 'Converge' | 'Commit' => {
+  if (activityId === 'welcome') return 'Open';
+  if (activityId === 'closing') return 'Commit';
+  if (activityId === 'short-break' || activityId === 'long-break') {
+    // Breaks inherit phase from surrounding activities
+    const phaseIndex = Math.floor((activityIndex / totalActivities) * 3);
+    return ['Diverge', 'Explore', 'Converge'][phaseIndex] as 'Diverge' | 'Explore' | 'Converge';
+  }
+  
+  // Main activities distributed across Diverge → Explore → Converge
+  const phaseIndex = Math.floor((activityIndex / totalActivities) * 3);
+  return ['Diverge', 'Explore', 'Converge'][phaseIndex] as 'Diverge' | 'Explore' | 'Converge';
+};
+
+const getActivityPurpose = (structure: LiberatingStructure, phase: string, context: string): string => {
+  const purposes = {
+    'welcome': `Skapa trygghet och tydlighet kring workshopens syfte. Etablera gemensam förståelse för ${context.split('.')[0].toLowerCase()}.`,
+    'closing': 'Säkerställa att alla vet vad som händer härnäst och känner sig engagerade i att genomföra planerade åtgärder.',
+    'short-break': 'Ge deltagarna tid att smälta intryck och ladda om inför nästa fas.',
+    'long-break': 'Ge deltagarna tid för reflektion och informella samtal som fördjupar förståelsen.'
+  };
+  
+  if (purposes[structure.id as keyof typeof purposes]) {
+    return purposes[structure.id as keyof typeof purposes];
+  }
+  
+  // Generate purpose based on phase and structure
+  const phasePurposes = {
+    'Diverge': `Öppna upp perspektiv och samla in olika synvinklar på ${context.split('.')[0].toLowerCase()}.`,
+    'Explore': `Fördjupa förståelsen och utforska möjliga lösningar och arbetssätt.`,
+    'Converge': `Fokusera på de mest lovande idéerna och skapa konkreta handlingsplaner.`
+  };
+  
+  return phasePurposes[phase as keyof typeof phasePurposes] || structure.description;
+};
+
+const getActivityOutput = (structure: LiberatingStructure, phase: string): string => {
+  const outputs = {
+    'welcome': 'Gemensam förståelse för workshopens syfte, agenda och förväntningar.',
+    'closing': 'Tydliga åtaganden och nästa steg för alla deltagare.',
+    'short-break': 'Återhämtade och fokuserade deltagare.',
+    'long-break': 'Fördjupad reflektion och stärkta relationer mellan deltagare.'
+  };
+  
+  if (outputs[structure.id as keyof typeof outputs]) {
+    return outputs[structure.id as keyof typeof outputs];
+  }
+  
+  const phaseOutputs = {
+    'Diverge': 'Bred samling av perspektiv, utmaningar och möjligheter.',
+    'Explore': 'Fördjupad förståelse och konkreta lösningsförslag.',
+    'Converge': 'Prioriterade åtgärder och tydlig handlingsplan.'
+  };
+  
+  return phaseOutputs[phase as keyof typeof phaseOutputs] || 'Insikter och idéer från gruppens diskussioner.';
+};
+
+const getActivityTransition = (currentStructure: LiberatingStructure, nextStructure: LiberatingStructure | null, currentPhase: string, nextPhase: string): string => {
+  if (!nextStructure) return '';
+  
+  if (currentStructure.id === 'welcome') {
+    return 'Nu när vi har en gemensam bild av vårt syfte, låt oss börja utforska utmaningen från olika perspektiv.';
+  }
+  
+  if (nextStructure.id === 'closing') {
+    return 'Baserat på allt vi har utforskat och bestämt, låt oss nu säkerställa att vi alla vet vad som händer härnäst.';
+  }
+  
+  if (currentPhase !== nextPhase) {
+    const phaseTransitions = {
+      'Diverge-Explore': 'Nu när vi har samlat många perspektiv, låt oss fördjupa oss i de mest intressanta områdena.',
+      'Explore-Converge': 'Med all denna förståelse, låt oss nu fokusera på vad vi faktiskt ska göra åt det.',
+      'Converge-Commit': 'Nu när vi har bestämt vad vi ska göra, låt oss säkerställa att alla är redo att agera.'
+    };
+    return phaseTransitions[`${currentPhase}-${nextPhase}` as keyof typeof phaseTransitions] || 'Låt oss fortsätta med nästa aktivitet.';
+  }
+  
+  return 'Låt oss bygga vidare på det vi just upptäckt.';
+};
+
+const getActivityRisks = (structure: LiberatingStructure, phase: string): { risks: string; mitigation: string } => {
+  const commonRisks = {
+    'welcome': {
+      risks: 'Deltagare känner sig osäkra på syftet eller har olika förväntningar.',
+      mitigation: 'Var extra tydlig med agenda och skapa utrymme för frågor. Kontrollera förståelsen.'
+    },
+    'closing': {
+      risks: 'Åtaganden blir vaga eller ingen tar ansvar för uppföljning.',
+      mitigation: 'Säkerställ konkreta åtaganden med namn och datum. Boka uppföljningsmöte innan alla går.'
+    }
+  };
+  
+  if (commonRisks[structure.id as keyof typeof commonRisks]) {
+    return commonRisks[structure.id as keyof typeof commonRisks];
+  }
+  
+  const phaseRisks = {
+    'Diverge': {
+      risks: 'Diskussionen blir för bred eller deltagare håller tillbaka sina åsikter.',
+      mitigation: 'Håll fokus på den centrala frågan. Uppmuntra alla att delta genom små grupper först.'
+    },
+    'Explore': {
+      risks: 'Gruppen fastnar i problemanalys utan att komma till lösningar.',
+      mitigation: 'Sätt tydliga tidsgränser och påminn om att vi ska komma fram till handlingsplaner.'
+    },
+    'Converge': {
+      risks: 'Svårt att komma överens eller beslut blir för vaga.',
+      mitigation: 'Använd strukturerade beslutsmetoder och säkerställ att alla förstår vad som bestämts.'
+    }
+  };
+  
+  return phaseRisks[phase as keyof typeof phaseRisks] || {
+    risks: 'Aktiviteten tar längre tid än planerat eller engagemanget sjunker.',
+    mitigation: 'Håll koll på tiden och energinivån. Anpassa vid behov.'
+  };
+};
+
+export const generateWorkshop = (hours: number, participants: number, purposes: string[], context: string, goals: string): Workshop => {
   // Calculate welcome and closing durations based on workshop length
   const getWelcomeClosingDuration = (totalHours: number): number => {
     if (totalHours <= 2) return 10;
@@ -50,12 +167,20 @@ export const generateWorkshop = (hours: number, participants: number, purposes: 
 
   // Add welcome activity
   const welcomeStructure = liberatingStructures.find(s => s.id === 'welcome')!;
+  const welcomePhase = getPhaseForActivity(0, 0, 'welcome');
+  const welcomeRiskMitigation = getActivityRisks(welcomeStructure, welcomePhase);
   sessions.push({
     id: `session-${sessions.length}`,
     structure: welcomeStructure,
     duration: welcomeClosingDuration,
     startTime: formatMinutesToTime(currentTime),
-    endTime: formatMinutesToTime(currentTime + welcomeClosingDuration)
+    endTime: formatMinutesToTime(currentTime + welcomeClosingDuration),
+    purpose: getActivityPurpose(welcomeStructure, welcomePhase, context),
+    output: getActivityOutput(welcomeStructure, welcomePhase),
+    transition: '',
+    phase: welcomePhase,
+    risks: welcomeRiskMitigation.risks,
+    mitigation: welcomeRiskMitigation.mitigation
   });
   currentTime += welcomeClosingDuration;
 
@@ -70,12 +195,20 @@ export const generateWorkshop = (hours: number, participants: number, purposes: 
       const breakStructure = liberatingStructures.find(s => 
         s.id === (breakDuration === 15 ? 'long-break' : 'short-break')
       )!;
+      const breakPhase = getPhaseForActivity(sessions.length, sessions.length + 5, breakStructure.id);
+      const breakRiskMitigation = getActivityRisks(breakStructure, breakPhase);
       sessions.push({
         id: `session-${sessions.length}`,
         structure: breakStructure,
         duration: breakDuration,
         startTime: formatMinutesToTime(currentTime),
-        endTime: formatMinutesToTime(currentTime + breakDuration)
+        endTime: formatMinutesToTime(currentTime + breakDuration),
+        purpose: getActivityPurpose(breakStructure, breakPhase, context),
+        output: getActivityOutput(breakStructure, breakPhase),
+        transition: '',
+        phase: breakPhase,
+        risks: breakRiskMitigation.risks,
+        mitigation: breakRiskMitigation.mitigation
       });
       currentTime += breakDuration;
       lastBreakTime = currentTime;
@@ -91,12 +224,20 @@ export const generateWorkshop = (hours: number, participants: number, purposes: 
     const roundedDuration = Math.ceil(baseDuration / 5) * 5;
     
     if (roundedDuration <= remainingMinutes) {
+      const activityPhase = getPhaseForActivity(sessions.length, sessions.length + 5, selectedStructure.id);
+      const activityRiskMitigation = getActivityRisks(selectedStructure, activityPhase);
       sessions.push({
         id: `session-${sessions.length}`,
         structure: selectedStructure,
         duration: roundedDuration,
         startTime: formatMinutesToTime(currentTime),
-        endTime: formatMinutesToTime(currentTime + roundedDuration)
+        endTime: formatMinutesToTime(currentTime + roundedDuration),
+        purpose: getActivityPurpose(selectedStructure, activityPhase, context),
+        output: getActivityOutput(selectedStructure, activityPhase),
+        transition: '',
+        phase: activityPhase,
+        risks: activityRiskMitigation.risks,
+        mitigation: activityRiskMitigation.mitigation
       });
       
       currentTime += roundedDuration;
@@ -109,13 +250,33 @@ export const generateWorkshop = (hours: number, participants: number, purposes: 
 
   // Add closing activity
   const closingStructure = liberatingStructures.find(s => s.id === 'closing')!;
+  const closingPhase = getPhaseForActivity(sessions.length, sessions.length, 'closing');
+  const closingRiskMitigation = getActivityRisks(closingStructure, closingPhase);
   sessions.push({
     id: `session-${sessions.length}`,
     structure: closingStructure,
     duration: welcomeClosingDuration,
     startTime: formatMinutesToTime(currentTime),
-    endTime: formatMinutesToTime(currentTime + welcomeClosingDuration)
+    endTime: formatMinutesToTime(currentTime + welcomeClosingDuration),
+    purpose: getActivityPurpose(closingStructure, closingPhase, context),
+    output: getActivityOutput(closingStructure, closingPhase),
+    transition: '',
+    phase: closingPhase,
+    risks: closingRiskMitigation.risks,
+    mitigation: closingRiskMitigation.mitigation
   });
+
+  // Add transitions between activities
+  for (let i = 0; i < sessions.length - 1; i++) {
+    const currentSession = sessions[i];
+    const nextSession = sessions[i + 1];
+    currentSession.transition = getActivityTransition(
+      currentSession.structure,
+      nextSession.structure,
+      currentSession.phase,
+      nextSession.phase
+    );
+  }
 
   return {
     id: `workshop-${Date.now()}`,
@@ -123,6 +284,8 @@ export const generateWorkshop = (hours: number, participants: number, purposes: 
     duration: hours,
     participants,
     purposes,
+    context,
+    goals,
     sessions,
     totalTime: currentTime + welcomeClosingDuration
   };

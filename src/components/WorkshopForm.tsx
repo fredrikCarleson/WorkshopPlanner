@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
-import { Clock, Users, Play } from 'lucide-react';
+import { Clock, Users, Play, FileText } from 'lucide-react';
 import { PurposeSelector } from './PurposeSelector';
 
 interface WorkshopFormProps {
-  onGenerate: (hours: number, participants: number, purposes: string[]) => void;
+  onGenerate: (hours: number, participants: number, purposes: string[], context: string, goals: string) => void;
   loading: boolean;
 }
 
@@ -11,10 +11,12 @@ export const WorkshopForm: React.FC<WorkshopFormProps> = ({ onGenerate, loading 
   const [hours, setHours] = useState(4);
   const [participants, setParticipants] = useState(12);
   const [selectedPurposes, setSelectedPurposes] = useState<string[]>([]);
+  const [context, setContext] = useState('');
+  const [goals, setGoals] = useState('');
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onGenerate(hours, participants, selectedPurposes);
+    onGenerate(hours, participants, selectedPurposes, context, goals);
   };
 
   return (
@@ -27,6 +29,38 @@ export const WorkshopForm: React.FC<WorkshopFormProps> = ({ onGenerate, loading 
       </p>
       
       <form onSubmit={handleSubmit} className="space-y-6">
+        <div>
+          <label htmlFor="context" className="block text-sm font-medium text-gray-700 mb-2">
+            <FileText className="inline w-4 h-4 mr-2" />
+            Workshopens syfte och kontext
+          </label>
+          <textarea
+            id="context"
+            value={context}
+            onChange={(e) => setContext(e.target.value)}
+            placeholder="Beskriv vad workshoppen handlar om, vilken utmaning ni ska utforska och varför ni samlas..."
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            rows={4}
+            required
+          />
+        </div>
+        
+        <div>
+          <label htmlFor="goals" className="block text-sm font-medium text-gray-700 mb-2">
+            <FileText className="inline w-4 h-4 mr-2" />
+            Konkreta mål för workshoppen
+          </label>
+          <textarea
+            id="goals"
+            value={goals}
+            onChange={(e) => setGoals(e.target.value)}
+            placeholder="Lista de konkreta målen ni vill uppnå under workshoppen..."
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            rows={4}
+            required
+          />
+        </div>
+        
         <PurposeSelector 
           selectedPurposes={selectedPurposes}
           onPurposesChange={setSelectedPurposes}
@@ -71,7 +105,7 @@ export const WorkshopForm: React.FC<WorkshopFormProps> = ({ onGenerate, loading 
         
         <button
           type="submit"
-          disabled={loading}
+          disabled={loading || !context.trim() || !goals.trim()}
           className="w-full bg-blue-600 text-white py-3 px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200 flex items-center justify-center"
         >
           <Play className="w-5 h-5 mr-2" />

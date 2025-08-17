@@ -17,14 +17,24 @@ export interface WorkshopSession {
   duration: number; // actual duration in minutes
   startTime: string;
   endTime: string;
+  purpose: string;
+  output: string;
+  transition: string;
+  phase: 'Open' | 'Diverge' | 'Explore' | 'Converge' | 'Commit';
+  risks: string;
+  mitigation: string;
   isBreak?: boolean;
   breakType?: 'short' | 'long';
 }
 
 export interface Workshop {
+  id: string;
+  title: string;
   duration: number; // hours
   participants: number;
   purposes: string[];
+  context: string;
+  goals: string;
   sessions: WorkshopSession[];
   totalTime: number; // minutes
 }

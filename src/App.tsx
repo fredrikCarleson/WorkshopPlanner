@@ -8,15 +8,15 @@ import { generateWorkshop } from './utils/workshopCalculator';
 function App() {
   const [workshop, setWorkshop] = useState<Workshop | null>(null);
   const [loading, setLoading] = useState(false);
-  const [lastParams, setLastParams] = useState<{ hours: number; participants: number; purposes: string[] } | null>(null);
+  const [lastParams, setLastParams] = useState<{ hours: number; participants: number; purposes: string[]; context: string; goals: string } | null>(null);
 
-  const handleGenerateWorkshop = async (hours: number, participants: number, purposes: string[]) => {
+  const handleGenerateWorkshop = async (hours: number, participants: number, purposes: string[], context: string, goals: string) => {
     setLoading(true);
-    setLastParams({ hours, participants, purposes });
+    setLastParams({ hours, participants, purposes, context, goals });
     
     // Add a small delay to show loading state
     setTimeout(() => {
-      const newWorkshop = generateWorkshop(hours, participants, purposes);
+      const newWorkshop = generateWorkshop(hours, participants, purposes, context, goals);
       setWorkshop(newWorkshop);
       setLoading(false);
     }, 800);
@@ -24,7 +24,7 @@ function App() {
 
   const handleRegenerate = () => {
     if (lastParams) {
-      handleGenerateWorkshop(lastParams.hours, lastParams.participants, lastParams.purposes);
+      handleGenerateWorkshop(lastParams.hours, lastParams.participants, lastParams.purposes, lastParams.context, lastParams.goals);
     }
   };
 

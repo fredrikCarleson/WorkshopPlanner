@@ -1,9 +1,20 @@
 import React from 'react';
-import { Clock, Users, RefreshCw, Download } from 'lucide-react';
+import { Clock, Users, RefreshCw, Download, Target, AlertTriangle, ArrowRight } from 'lucide-react';
 import { Workshop } from '../types/Workshop';
 import { StructureCard } from './StructureCard';
 import { formatTime } from '../utils/workshopCalculator';
 import { purposes } from '../data/purposes';
+
+const getPhaseColor = (phase: string): string => {
+  const colors = {
+    'Open': 'bg-blue-100 text-blue-800 border-blue-200',
+    'Diverge': 'bg-green-100 text-green-800 border-green-200',
+    'Explore': 'bg-yellow-100 text-yellow-800 border-yellow-200',
+    'Converge': 'bg-orange-100 text-orange-800 border-orange-200',
+    'Commit': 'bg-red-100 text-red-800 border-red-200'
+  };
+  return colors[phase as keyof typeof colors] || 'bg-gray-100 text-gray-800 border-gray-200';
+};
 
 interface WorkshopScheduleProps {
   workshop: Workshop;
@@ -17,8 +28,14 @@ export const WorkshopSchedule: React.FC<WorkshopScheduleProps> = ({ workshop, on
       .filter(Boolean)
       .join(', ');
     
-    const scheduleText = `Workshop Schema
+    const scheduleText = `Workshop Schema - ${workshop.title}
 =================
+
+KONTEXT:
+${workshop.context}
+
+MÅL:
+${workshop.goals}
 
 Duration: ${workshop.duration} timmar
 Deltagare: ${workshop.participants}
@@ -27,9 +44,22 @@ Total aktivitetstid: ${formatTime(workshop.totalTime)}
 
 Schema:
 -------
-${workshop.sessions.map((session, index) => 
-  `${index + 1}. ${session.startTime} - ${session.endTime}: ${session.structure.name} (${session.duration}min)
-   ${session.structure.description}`
+${workshop.sessions.map((session, index) => {
+  let text = `${index + 1}. ${session.startTime} - ${session.endTime}: ${session.structure.name} (${session.duration}min) [${session.phase}]
+   Syfte: ${session.purpose}
+   Output: ${session.output}
+   Beskrivning: ${session.structure.description}`;
+   
+  if (session.transition) {
+    text += `\n   Transition: ${session.transition}`;
+  }
+  
+  if (session.risks) {
+    text += `\n   Risker: ${session.risks}
+   Mitigering: ${session.mitigation}`;
+  }
+  
+  return text;
 ).join('\n\n')}
 
 Genererad med Workshop Planner`;
@@ -49,7 +79,22 @@ Genererad med Workshop Planner`;
     <div className="bg-white rounded-lg shadow-lg p-6">
       <div className="flex flex-wrap items-center justify-between mb-6">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">Ditt workshopschema</h2>
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">{workshop.title}</h2>
+          
+          {workshop.context && (
+            <div className="mb-4 p-4 bg-blue-50 rounded-lg">
+              <h3 className="font-semibold text-blue-900 mb-2">Kontext och syfte:</h3>
+              <p className="text-blue-800 text-sm leading-relaxed">{workshop.context}</p>
+            </div>
+          )}
+          
+          {workshop.goals && (
+            <div className="mb-4 p-4 bg-green-50 rounded-lg">
+              <h3 className="font-semibold text-green-900 mb-2">Mål:</h3>
+              <p className="text-green-800 text-sm leading-relaxed">{workshop.goals}</p>
+            </div>
+          )}
+          
           {workshop.purposes.length > 0 && (
             <div className="mb-2">
               <span className="text-sm font-medium text-gray-700">Fokusområden: </span>
@@ -96,7 +141,104 @@ Genererad med Workshop Planner`;
 
       <div className="space-y-4">
         {workshop.sessions.map((session, index) => (
-          <div key={session.id} className="flex items-start">
+          <div key={session.id} className="border rounded-lg p-4 bg-gray-50">
+            <div className="flex items-start justify-between mb-3">
+              <div className="flex items-center gap-3">
+                <div className="flex-shrink-0 w-20 text-sm text-gray-500">
+                  {session.startTime}
+                  <br />
+                  <span className="text-xs">({session.duration}min)</span>
+                </div>
+                <span className={`px-2 py-1 rounded-full text-xs font-medium ${getPhaseColor(session.phase)}`}>
+                  {session.phase}
+                </span>
+              </div>
+            </div>
+            
+            <div className="ml-23">
+              <StructureCard 
+                structure={session.structure} 
+                duration={session.duration}
+              />
+              
+              <div className="mt-3 space-y-2">
+                <div className="flex items-start">
+                  <Target className="w-4 h-4 text-blue-600 mr-2 mt-0.5 flex-shrink-0" />
+                  <div>
+                    <span className="text-sm font-medium text-gray-700">Syfte: </span>
+                    <span className="text-sm text-gray-600">{session.purpose}</span>
+                  </div>
+                </div>
+                
+                <div className="flex items-start">
+                  <ArrowRight className="w-4 h-4 text-green-600 mr-2 mt-0.5 flex-shrink-0" />
+                  <div>
+                    <span className="text-sm font-medium text-gray-700">Output: </span>
+                    <span className="text-sm text-gray-600">{session.output}</span>
+                  </div>
+                </div>
+                
+                {session.risks && (
+                  <div className="flex items-start">
+                    <AlertTriangle className="w-4 h-4 text-amber-600 mr-2 mt-0.5 flex-shrink-0" />
+                    <div>
+                      <span className="text-sm font-medium text-gray-700">Risk: </span>
+                      <span className="text-sm text-gray-600">{session.risks}</span>
+                      <br />
+                      <span className="text-sm font-medium text-gray-700">Mitigering: </span>
+                      <span className="text-sm text-gray-600">{session.mitigation}</span>
+                    </div>
+                  </div>
+                )}
+                
+                {session.transition && index < workshop.sessions.length - 1 && (
+                  <div className="mt-3 p-2 bg-blue-50 rounded border-l-4 border-blue-400">
+                    <span className="text-sm font-medium text-blue-800">Transition till nästa aktivitet: </span>
+                    <span className="text-sm text-blue-700 italic">"{session.transition}"</span>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+      
+      <div className="mt-6 p-4 bg-gray-100 rounded-lg">
+        <h3 className="font-semibold text-gray-900 mb-2">Narrativ båge:</h3>
+        <div className="flex flex-wrap gap-2">
+          {['Open', 'Diverge', 'Explore', 'Converge', 'Commit'].map((phase, index) => (
+            <div key={phase} className="flex items-center">
+              <span className={`px-3 py-1 rounded-full text-xs font-medium ${getPhaseColor(phase)}`}>
+                {phase}
+              </span>
+              {index < 4 && <ArrowRight className="w-4 h-4 text-gray-400 mx-1" />}
+            </div>
+          ))}
+        </div>
+        <p className="text-sm text-gray-600 mt-2">
+          Workshoppen följer en strukturerad narrativ båge från öppning till åtagande, 
+          där varje fas bygger på den föregående för att skapa en sammanhängande upplevelse.
+        </p>
+      </div>
+
+      {workshop.sessions.length === 0 && (
+        <div className="text-center py-12">
+          <p className="text-gray-500">Inga aktiviteter kunde genereras för dessa parametrar.</p>
+          <p className="text-gray-400 text-sm mt-2">Prova att ändra antalet deltagare eller workshoplängden.</p>
+        </div>
+      )}
+    </div>
+  );
+};
+
+// Remove the old structure that was duplicated
+const OldWorkshopSchedule = () => {
+  return (
+    <div className="space-y-4">
+      {/* Old implementation removed */}
+    </div>
+  );
+};
             <div className="flex-shrink-0 w-20 text-sm text-gray-500 pt-4">
               {session.startTime}
               <br />
