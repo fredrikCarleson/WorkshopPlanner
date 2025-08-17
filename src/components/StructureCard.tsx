@@ -20,7 +20,7 @@ export const StructureCard: React.FC<StructureCardProps> = ({
   
   if (isBreak) {
     return (
-      <div className="bg-amber-50 rounded-lg shadow-md p-4 border-l-4 border-amber-400">
+      <div className="bg-amber-50 rounded-lg shadow-md p-4 border-l-4 border-amber-400 print-avoid-break">
         <div className="flex items-center justify-between">
           <div className="flex items-center">
             <Coffee className="w-5 h-5 text-amber-600 mr-2" />
@@ -39,7 +39,7 @@ export const StructureCard: React.FC<StructureCardProps> = ({
   }
   
   return (
-    <div className="bg-white rounded-lg shadow-md hover:shadow-lg transition-all duration-200 p-4 border-l-4 border-blue-500">
+    <div className="bg-white rounded-lg shadow-md hover:shadow-lg transition-all duration-200 p-4 border-l-4 border-blue-500 print-avoid-break">
       <div className="flex items-start justify-between mb-3">
         <div className="flex-1">
           <h3 className="font-semibold text-gray-900 mb-1">
@@ -63,7 +63,7 @@ export const StructureCard: React.FC<StructureCardProps> = ({
       {!showDetails && (
         <button
           onClick={() => setIsExpanded(!isExpanded)}
-          className="flex items-center text-blue-600 hover:text-blue-800 text-sm font-medium transition-colors duration-200 mb-3"
+          className="no-print flex items-center text-blue-600 hover:text-blue-800 text-sm font-medium transition-colors duration-200 mb-3"
         >
           {isExpanded ? (
             <>
@@ -80,7 +80,7 @@ export const StructureCard: React.FC<StructureCardProps> = ({
       )}
       
       {(isExpanded || showDetails) && (
-        <div className="bg-gray-50 rounded-md p-3 mb-3">
+        <div className="bg-gray-50 rounded-md p-3 mb-3 session-instructions">
           <h4 className="font-medium text-gray-900 mb-2">Genomförande:</h4>
           <p className="text-gray-700 text-sm leading-relaxed">{structure.instructions}</p>
         </div>

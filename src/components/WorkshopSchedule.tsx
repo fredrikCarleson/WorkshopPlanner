@@ -1,5 +1,5 @@
 import React from 'react';
-import { Clock, Users, RefreshCw, Download, Target, AlertTriangle, ArrowRight } from 'lucide-react';
+import { Clock, Users, RefreshCw, Download, Target, AlertTriangle, ArrowRight, Printer } from 'lucide-react';
 import { Workshop } from '../types/Workshop';
 import { StructureCard } from './StructureCard';
 import { formatTime } from '../utils/workshopCalculator';
@@ -75,6 +75,10 @@ Genererad med Workshop Planner`;
     URL.revokeObjectURL(url);
   };
 
+  const handlePrint = () => {
+    window.print();
+  };
+
   return (
     <div className="bg-white rounded-lg shadow-lg p-6">
       <div className="flex flex-wrap items-center justify-between mb-6">
@@ -124,14 +128,21 @@ Genererad med Workshop Planner`;
         <div className="flex gap-3 mt-4 sm:mt-0">
           <button
             onClick={onRegenerate}
-            className="flex items-center px-4 py-2 text-blue-600 bg-blue-50 rounded-md hover:bg-blue-100 transition-colors duration-200"
+            className="no-print flex items-center px-4 py-2 text-blue-600 bg-blue-50 rounded-md hover:bg-blue-100 transition-colors duration-200"
           >
             <RefreshCw className="w-4 h-4 mr-2" />
             Regenerera
           </button>
           <button
+            onClick={handlePrint}
+            className="no-print flex items-center px-4 py-2 text-purple-600 bg-purple-50 rounded-md hover:bg-purple-100 transition-colors duration-200"
+          >
+            <Printer className="w-4 h-4 mr-2" />
+            Skriv ut
+          </button>
+          <button
             onClick={handleExport}
-            className="flex items-center px-4 py-2 text-green-600 bg-green-50 rounded-md hover:bg-green-100 transition-colors duration-200"
+            className="no-print flex items-center px-4 py-2 text-green-600 bg-green-50 rounded-md hover:bg-green-100 transition-colors duration-200"
           >
             <Download className="w-4 h-4 mr-2" />
             Exportera
@@ -141,51 +152,51 @@ Genererad med Workshop Planner`;
 
       <div className="space-y-4">
         {workshop.sessions.map((session, index) => (
-          <div key={session.id} className="border rounded-lg p-4 bg-gray-50">
-            <div className="flex items-start justify-between mb-3">
+          <div key={session.id} className="border rounded-lg p-4 bg-gray-50 workshop-session print-avoid-break">
+            <div className="flex items-start justify-between mb-3 session-header">
               <div className="flex items-center gap-3">
-                <div className="flex-shrink-0 w-20 text-sm text-gray-500">
+                <div className="flex-shrink-0 w-20 text-sm text-gray-500 session-time">
                   {session.startTime}
                   <br />
                   <span className="text-xs">({session.duration}min)</span>
                 </div>
-                <span className={`px-2 py-1 rounded-full text-xs font-medium ${getPhaseColor(session.phase)}`}>
+                <span className={`px-2 py-1 rounded-full text-xs font-medium session-phase ${getPhaseColor(session.phase)}`}>
                   {session.phase}
                 </span>
               </div>
             </div>
             
-            <div className="ml-23">
+            <div className="ml-23 session-content">
               <StructureCard 
                 structure={session.structure} 
                 duration={session.duration}
               />
               
-              <div className="mt-3 space-y-2">
-                <div className="flex items-start">
+              <div className="mt-3 space-y-2 session-details">
+                <div className="flex items-start session-detail-item">
                   <Target className="w-4 h-4 text-blue-600 mr-2 mt-0.5 flex-shrink-0" />
                   <div>
-                    <span className="text-sm font-medium text-gray-700">Syfte: </span>
+                    <span className="text-sm font-medium text-gray-700 session-detail-label">Syfte: </span>
                     <span className="text-sm text-gray-600">{session.purpose}</span>
                   </div>
                 </div>
                 
-                <div className="flex items-start">
+                <div className="flex items-start session-detail-item">
                   <ArrowRight className="w-4 h-4 text-green-600 mr-2 mt-0.5 flex-shrink-0" />
                   <div>
-                    <span className="text-sm font-medium text-gray-700">Output: </span>
+                    <span className="text-sm font-medium text-gray-700 session-detail-label">Output: </span>
                     <span className="text-sm text-gray-600">{session.output}</span>
                   </div>
                 </div>
                 
                 {session.risks && (
-                  <div className="flex items-start">
+                  <div className="flex items-start session-detail-item">
                     <AlertTriangle className="w-4 h-4 text-amber-600 mr-2 mt-0.5 flex-shrink-0" />
                     <div>
-                      <span className="text-sm font-medium text-gray-700">Risk: </span>
+                      <span className="text-sm font-medium text-gray-700 session-detail-label">Risk: </span>
                       <span className="text-sm text-gray-600">{session.risks}</span>
                       <br />
-                      <span className="text-sm font-medium text-gray-700">Mitigering: </span>
+                      <span className="text-sm font-medium text-gray-700 session-detail-label">Mitigering: </span>
                       <span className="text-sm text-gray-600">{session.mitigation}</span>
                     </div>
                   </div>
@@ -203,12 +214,12 @@ Genererad med Workshop Planner`;
         ))}
       </div>
       
-      <div className="mt-6 p-4 bg-gray-100 rounded-lg">
+      <div className="mt-6 p-4 bg-gray-100 rounded-lg narrative-arc">
         <h3 className="font-semibold text-gray-900 mb-2">Narrativ båge:</h3>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-2 phase-flow">
           {['Open', 'Diverge', 'Explore', 'Converge', 'Commit'].map((phase, index) => (
             <div key={phase} className="flex items-center">
-              <span className={`px-3 py-1 rounded-full text-xs font-medium ${getPhaseColor(phase)}`}>
+              <span className={`px-3 py-1 rounded-full text-xs font-medium phase-item ${getPhaseColor(phase)}`}>
                 {phase}
               </span>
               {index < 4 && <ArrowRight className="w-4 h-4 text-gray-400 mx-1" />}
