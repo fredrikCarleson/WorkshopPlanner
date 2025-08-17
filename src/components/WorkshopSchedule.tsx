@@ -60,7 +60,7 @@ ${workshop.sessions.map((session, index) => {
   }
   
   return text;
-).join('\n\n')}
+}).join('\n\n')}
 
 Genererad med Workshop Planner`;
 
@@ -236,30 +236,21 @@ const OldWorkshopSchedule = () => {
   return (
     <div className="space-y-4">
       {/* Old implementation removed */}
-    </div>
-  );
-};
-            <div className="flex-shrink-0 w-20 text-sm text-gray-500 pt-4">
-              {session.startTime}
-              <br />
-              <span className="text-xs">({session.duration}min)</span>
-            </div>
-            <div className="flex-1 ml-4">
-              <StructureCard 
-                structure={session.structure} 
-                duration={session.duration}
-              />
-            </div>
+      {workshop.sessions.map((session, index) => (
+        <div key={session.id} className="flex">
+          <div className="flex-shrink-0 w-20 text-sm text-gray-500 pt-4">
+            {session.startTime}
+            <br />
+            <span className="text-xs">({session.duration}min)</span>
           </div>
-        ))}
-      </div>
-
-      {workshop.sessions.length === 0 && (
-        <div className="text-center py-12">
-          <p className="text-gray-500">Inga aktiviteter kunde genereras för dessa parametrar.</p>
-          <p className="text-gray-400 text-sm mt-2">Prova att ändra antalet deltagare eller workshoplängden.</p>
+          <div className="flex-1 ml-4">
+            <StructureCard 
+              structure={session.structure} 
+              duration={session.duration}
+            />
+          </div>
         </div>
-      )}
+      ))}
     </div>
   );
 };
