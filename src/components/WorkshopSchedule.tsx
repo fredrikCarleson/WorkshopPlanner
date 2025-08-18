@@ -76,7 +76,35 @@ Genererad med Workshop Planner`;
   };
 
   const handlePrint = () => {
-    window.print();
+    console.log('Print function called');
+    console.log('Current URL:', window.location.href);
+    console.log('Document ready state:', document.readyState);
+    
+    try {
+      // Ensure document is fully loaded
+      if (document.readyState !== 'complete') {
+        console.log('Document not ready, waiting...');
+        window.addEventListener('load', () => {
+          console.log('Document loaded, attempting print');
+          window.print();
+        });
+      } else {
+        console.log('Document ready, attempting print');
+        window.print();
+      }
+    } catch (error) {
+      console.error('Print error:', error);
+      // Fallback: try to open print dialog after a short delay
+      setTimeout(() => {
+        console.log('Fallback print attempt');
+        try {
+          window.print();
+        } catch (fallbackError) {
+          console.error('Fallback print error:', fallbackError);
+          alert('Utskrift misslyckades. Prova att använda Ctrl+P eller Cmd+P istället.');
+        }
+      }, 100);
+    }
   };
 
   return (
