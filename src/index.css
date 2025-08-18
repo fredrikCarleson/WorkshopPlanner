@@ -1,3 +1,133 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Print styles */
+@media print {
+  /* Debug: Add border to see what's being printed */
+  * {
+    -webkit-print-color-adjust: exact !important;
+    color-adjust: exact !important;
+  }
+  
+  /* Hide interactive elements */
+  .no-print {
+    display: none !important;
+  }
+  
+  /* Ensure content is visible */
+  body {
+    background: white !important;
+    color: black !important;
+    font-size: 12pt !important;
+    line-height: 1.4 !important;
+    margin: 0 !important;
+    padding: 20px !important;
+  }
+  
+  /* Make sure main content is visible */
+  #root {
+    display: block !important;
+    visibility: visible !important;
+  }
+  
+  /* Container adjustments */
+  .container {
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+  
+  /* Typography for print */
+  h1 {
+    font-size: 18pt !important;
+    margin-bottom: 12pt !important;
+  }
+  
+  h2 {
+    font-size: 16pt !important;
+    margin-bottom: 10pt !important;
+  }
+  
+  h3 {
+    font-size: 14pt !important;
+    margin-bottom: 8pt !important;
+  }
+  
+  p, div, span {
+    font-size: 12pt !important;
+    line-height: 1.3 !important;
+  }
+  
+  /* Workshop session styling */
+  .workshop-session {
+    border: 1px solid #ccc !important;
+    margin-bottom: 15pt !important;
+    padding: 10pt !important;
+    background: white !important;
+  }
+  
+  .session-header {
+    border-bottom: 1px solid #666 !important;
+    padding-bottom: 5pt !important;
+    margin-bottom: 8pt !important;
+  }
+  
+  .session-phase {
+    border: 1px solid #666 !important;
+    padding: 2pt 6pt !important;
+    background: #f0f0f0 !important;
+    color: black !important;
+  }
+  
+  .session-time {
+    font-weight: bold !important;
+  }
+  
+  .session-instructions {
+    background: #f8f8f8 !important;
+    color: black !important;
+    border: 1px solid #ddd !important;
+    padding: 8pt !important;
+    margin: 5pt 0 !important;
+  }
+  
+  .narrative-arc {
+    background: #f5f5f5 !important;
+    color: black !important;
+    border: 1px solid #ccc !important;
+    padding: 10pt !important;
+    margin-top: 15pt !important;
+  }
+  
+  .phase-flow {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    gap: 5pt !important;
+  }
+  
+  .phase-item {
+    border: 1px solid #666 !important;
+    padding: 2pt 6pt !important;
+    background: #f0f0f0 !important;
+    color: black !important;
+  }
+  
+  /* Ensure all text is black */
+  * {
+    color: black !important;
+  }
+  
+  /* Force backgrounds to be white or light gray */
+  .bg-blue-50, .bg-green-50, .bg-yellow-50, .bg-orange-50, .bg-red-50 {
+    background: #f8f8f8 !important;
+  }
+  
+  .bg-white {
+    background: white !important;
+  }
+  
+  .bg-gray-50, .bg-gray-100 {
+    background: #f5f5f5 !important;
+  }
+}
