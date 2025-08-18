@@ -4,19 +4,23 @@ import { PurposeSelector } from './PurposeSelector';
 
 interface WorkshopFormProps {
   onGenerate: (hours: number, participants: number, purposes: string[], context: string, goals: string) => void;
+  formData: {
+    hours: number;
+    participants: number;
+    purposes: string[];
+    context: string;
+    goals: string;
+  };
+  onFormDataChange: (data: Partial<WorkshopFormProps['formData']>) => void;
   loading: boolean;
 }
 
-export const WorkshopForm: React.FC<WorkshopFormProps> = ({ onGenerate, loading }) => {
-  const [hours, setHours] = useState(4);
-  const [participants, setParticipants] = useState(12);
-  const [selectedPurposes, setSelectedPurposes] = useState<string[]>([]);
-  const [context, setContext] = useState('');
-  const [goals, setGoals] = useState('');
+export const WorkshopForm: React.FC<WorkshopFormProps> = ({ onGenerate, formData, onFormDataChange, loading }) => {
+  const { hours, participants, purposes: selectedPurposes, context, goals } = formData;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onGenerate(hours, participants, selectedPurposes, context, goals);
+    onGenerate(formData.hours, formData.participants, formData.purposes, formData.context, formData.goals);
   };
 
   return (
@@ -36,8 +40,8 @@ export const WorkshopForm: React.FC<WorkshopFormProps> = ({ onGenerate, loading 
           </label>
           <textarea
             id="context"
-            value={context}
-            onChange={(e) => setContext(e.target.value)}
+            value={formData.context}
+            onChange={(e) => onFormDataChange({ context: e.target.value })}
             placeholder="Beskriv vad workshoppen handlar om, vilken utmaning ni ska utforska och varför ni samlas..."
             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             rows={4}
@@ -52,8 +56,8 @@ export const WorkshopForm: React.FC<WorkshopFormProps> = ({ onGenerate, loading 
           </label>
           <textarea
             id="goals"
-            value={goals}
-            onChange={(e) => setGoals(e.target.value)}
+            value={formData.goals}
+            onChange={(e) => onFormDataChange({ goals: e.target.value })}
             placeholder="Lista de konkreta målen ni vill uppnå under workshoppen..."
             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             rows={4}
@@ -62,8 +66,8 @@ export const WorkshopForm: React.FC<WorkshopFormProps> = ({ onGenerate, loading 
         </div>
         
         <PurposeSelector 
-          selectedPurposes={selectedPurposes}
-          onPurposesChange={setSelectedPurposes}
+          selectedPurposes={formData.purposes}
+          onPurposesChange={(purposes) => onFormDataChange({ purposes })}
         />
         
         <div className="grid md:grid-cols-2 gap-6">
@@ -74,8 +78,8 @@ export const WorkshopForm: React.FC<WorkshopFormProps> = ({ onGenerate, loading 
             </label>
             <select
               id="hours"
-              value={hours}
-              onChange={(e) => setHours(Number(e.target.value))}
+              value={formData.hours}
+              onChange={(e) => onFormDataChange({ hours: Number(e.target.value) })}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             >
               {[1, 2, 3, 4, 5, 6, 7, 8].map(hour => (
@@ -96,8 +100,8 @@ export const WorkshopForm: React.FC<WorkshopFormProps> = ({ onGenerate, loading 
               id="participants"
               min="3"
               max="200"
-              value={participants}
-              onChange={(e) => setParticipants(Number(e.target.value))}
+              value={formData.participants}
+              onChange={(e) => onFormDataChange({ participants: Number(e.target.value) })}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
           </div>
@@ -105,7 +109,7 @@ export const WorkshopForm: React.FC<WorkshopFormProps> = ({ onGenerate, loading 
         
         <button
           type="submit"
-          disabled={loading || !context.trim() || !goals.trim()}
+          disabled={loading || !formData.context.trim() || !formData.goals.trim()}
           className="w-full bg-blue-600 text-white py-3 px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200 flex items-center justify-center"
         >
           <Play className="w-5 h-5 mr-2" />

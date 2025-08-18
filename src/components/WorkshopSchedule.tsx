@@ -1,5 +1,7 @@
 import React from 'react';
-import { Clock, Users, RefreshCw, Download, Target, AlertTriangle, ArrowRight, Printer } from 'lucide-react';
+import { Clock, Users, RefreshCw, Download, Target, AlertTriangle, ArrowRight, FileText } from 'lucide-react';
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
 import { Workshop } from '../types/Workshop';
 import { StructureCard } from './StructureCard';
 import { formatTime } from '../utils/workshopCalculator';
@@ -75,35 +77,50 @@ Genererad med Workshop Planner`;
     URL.revokeObjectURL(url);
   };
 
-  const handlePrint = () => {
-    console.log('Print function called');
-    console.log('Current URL:', window.location.href);
-    console.log('Document ready state:', document.readyState);
-    
+  const handleExportPDF = async () => {
+    const element = document.getElementById('workshop-content');
+    if (!element) return;
+
+    // Hide elements that shouldn't be in PDF
+    const elementsToHide = document.querySelectorAll('.no-print');
+    elementsToHide.forEach(el => (el as HTMLElement).style.display = 'none');
+
     try {
-      // Ensure document is fully loaded
-      if (document.readyState !== 'complete') {
-        console.log('Document not ready, waiting...');
-        window.addEventListener('load', () => {
-          console.log('Document loaded, attempting print');
-          window.print();
-        });
-      } else {
-        console.log('Document ready, attempting print');
-        window.print();
+      const canvas = await html2canvas(element, {
+        scale: 2,
+        useCORS: true,
+        allowTaint: true,
+        backgroundColor: '#ffffff'
+      });
+
+      const imgData = canvas.toDataURL('image/png');
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      
+      const imgWidth = 210; // A4 width in mm
+      const pageHeight = 295; // A4 height in mm
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+      let heightLeft = imgHeight;
+      let position = 0;
+
+      // Add first page
+      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+      heightLeft -= pageHeight;
+
+      // Add additional pages if needed
+      while (heightLeft >= 0) {
+        position = heightLeft - imgHeight;
+        pdf.addPage();
+        pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+        heightLeft -= pageHeight;
       }
+
+      pdf.save(`workshop-${workshop.duration}h-${workshop.participants}p.pdf`);
     } catch (error) {
-      console.error('Print error:', error);
-      // Fallback: try to open print dialog after a short delay
-      setTimeout(() => {
-        console.log('Fallback print attempt');
-        try {
-          window.print();
-        } catch (fallbackError) {
-          console.error('Fallback print error:', fallbackError);
-          alert('Utskrift misslyckades. Prova att använda Ctrl+P eller Cmd+P istället.');
-        }
-      }, 100);
+      console.error('PDF export error:', error);
+      alert('PDF-export misslyckades. Prova igen eller använd textexport istället.');
+    } finally {
+      // Show hidden elements again
+      elementsToHide.forEach(el => (el as HTMLElement).style.display = '');
     }
   };
 
@@ -162,11 +179,11 @@ Genererad med Workshop Planner`;
             Regenerera
           </button>
           <button
-            onClick={handlePrint}
+            onClick={handleExportPDF}
             className="no-print flex items-center px-4 py-2 text-purple-600 bg-purple-50 rounded-md hover:bg-purple-100 transition-colors duration-200"
           >
-            <Printer className="w-4 h-4 mr-2" />
-            Skriv ut
+            <FileText className="w-4 h-4 mr-2" />
+            Exportera PDF
           </button>
           <button
             onClick={handleExport}
@@ -178,7 +195,21 @@ Genererad med Workshop Planner`;
         </div>
       </div>
 
-      <div className="space-y-4">
+      <div id="workshop-content" className="space-y-4">
+        {workshop.context && (
+          <div className="mb-4 p-4 bg-blue-50 rounded-lg print-context">
+            <h3 className="font-semibold text-blue-900 mb-2">Kontext och syfte:</h3>
+            <div className="text-blue-800 text-sm leading-relaxed whitespace-pre-wrap">{workshop.context}</div>
+          </div>
+        )}
+        
+        {workshop.goals && (
+          <div className="mb-4 p-4 bg-green-50 rounded-lg print-goals">
+            <h3 className="font-semibold text-green-900 mb-2">Mål:</h3>
+            <div className="text-green-800 text-sm leading-relaxed whitespace-pre-wrap">{workshop.goals}</div>
+          </div>
+        )}
+
         {workshop.sessions.map((session, index) => (
           <div key={session.id} className="border rounded-lg p-4 bg-gray-50 workshop-session print-avoid-break">
             <div className="flex items-start justify-between mb-3 session-header">
@@ -242,7 +273,7 @@ Genererad med Workshop Planner`;
         ))}
       </div>
       
-      <div className="mt-6 p-4 bg-gray-100 rounded-lg narrative-arc">
+      <div className="mt-6 p-4 bg-gray-100 rounded-lg narrative-arc print-narrative">
         <h3 className="font-semibold text-gray-900 mb-2">Narrativ båge:</h3>
         <div className="flex flex-wrap gap-2 phase-flow">
           {['Open', 'Diverge', 'Explore', 'Converge', 'Commit'].map((phase, index) => (
@@ -266,30 +297,6 @@ Genererad med Workshop Planner`;
           <p className="text-gray-400 text-sm mt-2">Prova att ändra antalet deltagare eller workshoplängden.</p>
         </div>
       )}
-    </div>
-  );
-};
-
-// Remove the old structure that was duplicated
-const OldWorkshopSchedule = () => {
-  return (
-    <div className="space-y-4">
-      {/* Old implementation removed */}
-      {workshop.sessions.map((session, index) => (
-        <div key={session.id} className="flex">
-          <div className="flex-shrink-0 w-20 text-sm text-gray-500 pt-4">
-            {session.startTime}
-            <br />
-            <span className="text-xs">({session.duration}min)</span>
-          </div>
-          <div className="flex-1 ml-4">
-            <StructureCard 
-              structure={session.structure} 
-              duration={session.duration}
-            />
-          </div>
-        </div>
-      ))}
     </div>
   );
 };

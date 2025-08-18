@@ -50,7 +50,9 @@ function App() {
           />
         )}
         
-        <StructureLibrary />
+        <div className="no-print">
+          <StructureLibrary />
+        </div>
         
         <footer className="mt-12 text-center text-gray-500 text-sm">
           <p>

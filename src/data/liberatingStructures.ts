@@ -53,18 +53,6 @@ export const liberatingStructures: LiberatingStructure[] = [
 
   // Row 1
   {
-    id: 'ls-menu',
-    name: 'LS Menu',
-    category: 'Foundation',
-    baseTime: 15,
-    scalingFactor: 0.5,
-    minParticipants: 3,
-    maxParticipants: 100,
-    description: 'Översikt och val av Liberating Structures',
-    instructions: 'Börja med att presentera Liberating Structures som ett alternativ till traditionella mötesformer. Visa menyn med alla 33 metoder och förklara de fem kategorierna (Foundation, Planning, Deciding, Connecting, Learning). Låt deltagarna i par diskutera vilka utmaningar de har och vilka metoder som skulle kunna hjälpa. Samla upp i helgrupp och diskutera när olika metoder är mest användbara. Avsluta med att välja 2-3 metoder som gruppen vill testa under workshoppen.',
-    icon: '📋'
-  },
-  {
     id: 'wicked-questions',
     name: 'Wicked Questions',
     category: 'Foundation',
