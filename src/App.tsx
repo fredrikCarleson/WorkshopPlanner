@@ -57,6 +57,7 @@ function App() {
   };
 
   const handleRegenerate = () => {
+    // Only regenerate, don't clear form data
     handleGenerateWorkshop();
   };
 

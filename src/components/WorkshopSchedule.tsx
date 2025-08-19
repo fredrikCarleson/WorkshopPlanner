@@ -81,11 +81,14 @@ Genererad med Workshop Planner`;
     const element = document.getElementById('workshop-content');
     if (!element) return;
 
+    console.log('Starting PDF export...');
+    
     // Hide elements that shouldn't be in PDF
     const elementsToHide = document.querySelectorAll('.no-print');
     elementsToHide.forEach(el => (el as HTMLElement).style.display = 'none');
 
     try {
+      console.log('Capturing canvas...');
       const canvas = await html2canvas(element, {
         scale: 2,
         useCORS: true,
@@ -93,6 +96,7 @@ Genererad med Workshop Planner`;
         backgroundColor: '#ffffff'
       });
 
+      console.log('Creating PDF...');
       const imgData = canvas.toDataURL('image/png');
       const pdf = new jsPDF('p', 'mm', 'a4');
       
@@ -114,13 +118,16 @@ Genererad med Workshop Planner`;
         heightLeft -= pageHeight;
       }
 
+      console.log('Saving PDF...');
       pdf.save(`workshop-${workshop.duration}h-${workshop.participants}p.pdf`);
+      console.log('PDF export completed successfully');
     } catch (error) {
       console.error('PDF export error:', error);
       alert('PDF-export misslyckades. Prova igen eller använd textexport istället.');
     } finally {
       // Show hidden elements again
       elementsToHide.forEach(el => (el as HTMLElement).style.display = '');
+      console.log('PDF export cleanup completed');
     }
   };
 
