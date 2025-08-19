@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { WorkshopForm } from './components/WorkshopForm';
 import { WorkshopSchedule } from './components/WorkshopSchedule';
 import { StructureLibrary } from './components/StructureLibrary';
@@ -24,6 +24,27 @@ function App() {
     goals: ''
   });
 
+  // Load saved data on component mount
+  useEffect(() => {
+    const savedFormData = localStorage.getItem('formData');
+    const savedWorkshop = localStorage.getItem('workshop');
+    
+    if (savedFormData) {
+      setFormData(JSON.parse(savedFormData));
+    }
+    if (savedWorkshop) {
+      setWorkshop(JSON.parse(savedWorkshop));
+    }
+  }, []);
+
+  // Save data whenever it changes
+  useEffect(() => {
+    localStorage.setItem('formData', JSON.stringify(formData));
+    if (workshop) {
+      localStorage.setItem('workshop', JSON.stringify(workshop));
+    }
+  }, [workshop, formData]);
+
   const handleGenerateWorkshop = () => {
     setLoading(true);
     
@@ -41,10 +62,8 @@ function App() {
 
   const handleFormDataChange = (data: Partial<FormData>) => {
     setFormData(prev => ({ ...prev, ...data }));
-    if (savedFormData) {
-      setFormData(JSON.parse(savedFormData));
-    }
-  }
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="container mx-auto px-4 py-8 max-w-6xl">
@@ -84,9 +103,11 @@ function App() {
             >
               Liberating Structures
             </a>
-    localStorage.setItem('formData', JSON.stringify(formData));
-  }, [workshop, formData]);
+           </p>
+         </footer>
+       </div>
+     </div>
+   );
+}
 
 export default App;
-  )
-}
