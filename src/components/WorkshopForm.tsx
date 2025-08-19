@@ -3,7 +3,7 @@ import { Clock, Users, Play, FileText } from 'lucide-react';
 import { PurposeSelector } from './PurposeSelector';
 
 interface WorkshopFormProps {
-  onGenerate: (hours: number, participants: number, purposes: string[], context: string, goals: string) => void;
+  onGenerate: () => void;
   formData: {
     hours: number;
     participants: number;
@@ -20,7 +20,7 @@ export const WorkshopForm: React.FC<WorkshopFormProps> = ({ onGenerate, formData
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onGenerate(formData.hours, formData.participants, formData.purposes, formData.context, formData.goals);
+    onGenerate();
   };
 
   return (

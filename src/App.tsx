@@ -5,34 +5,53 @@ import { StructureLibrary } from './components/StructureLibrary';
 import { Workshop } from './types/Workshop';
 import { generateWorkshop } from './utils/workshopCalculator';
 
+interface FormData {
+  hours: number;
+  participants: number;
+  purposes: string[];
+  context: string;
+  goals: string;
+}
+
 function App() {
   const [workshop, setWorkshop] = useState<Workshop | null>(null);
   const [loading, setLoading] = useState(false);
-  const [lastParams, setLastParams] = useState<{ hours: number; participants: number; purposes: string[]; context: string; goals: string } | null>(null);
+  const [formData, setFormData] = useState<FormData>({
+    hours: 4,
+    participants: 12,
+    purposes: [],
+    context: '',
+    goals: ''
+  });
 
-  const handleGenerateWorkshop = async (hours: number, participants: number, purposes: string[], context: string, goals: string) => {
+  const handleGenerateWorkshop = () => {
     setLoading(true);
-    setLastParams({ hours, participants, purposes, context, goals });
     
     // Add a small delay to show loading state
     setTimeout(() => {
-      const newWorkshop = generateWorkshop(hours, participants, purposes, context, goals);
+      const newWorkshop = generateWorkshop(formData.hours, formData.participants, formData.purposes, formData.context, formData.goals);
       setWorkshop(newWorkshop);
       setLoading(false);
     }, 800);
   };
 
   const handleRegenerate = () => {
-    if (lastParams) {
-      handleGenerateWorkshop(lastParams.hours, lastParams.participants, lastParams.purposes, lastParams.context, lastParams.goals);
-    }
+    handleGenerateWorkshop();
   };
 
+  const handleFormDataChange = (data: Partial<FormData>) => {
+    setFormData(prev => ({ ...prev, ...data }));
+    if (savedFormData) {
+      setFormData(JSON.parse(savedFormData));
+    }
+  }
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="container mx-auto px-4 py-8 max-w-6xl">
         <WorkshopForm 
           onGenerate={handleGenerateWorkshop} 
+          formData={formData}
+          onFormDataChange={handleFormDataChange}
           loading={loading}
         />
         
@@ -65,12 +84,9 @@ function App() {
             >
               Liberating Structures
             </a>
-            {' '}av Henri Lipmanowicz och Keith McCandless
-          </p>
-        </footer>
-      </div>
-    </div>
-  );
-}
+    localStorage.setItem('formData', JSON.stringify(formData));
+  }, [workshop, formData]);
 
 export default App;
+  )
+}
