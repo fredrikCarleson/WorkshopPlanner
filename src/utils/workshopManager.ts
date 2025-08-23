@@ -175,3 +175,27 @@ export const loadAutoSavedFormData = (): FormData | null => {
   }
   return null;
 };
+
+// Clean up duplicate workshops (keep only the most recent version of each unique workshop)
+export const cleanupDuplicateWorkshops = (): void => {
+  try {
+    const workshops = getSavedWorkshops();
+    const uniqueWorkshops = new Map<string, SavedWorkshop>();
+    
+    // Group workshops by name and keep only the most recent one
+    workshops.forEach(workshop => {
+      const existing = uniqueWorkshops.get(workshop.name);
+      if (!existing || workshop.lastModified > existing.lastModified) {
+        uniqueWorkshops.set(workshop.name, workshop);
+      }
+    });
+    
+    // Save the deduplicated workshops
+    const cleanedWorkshops = Array.from(uniqueWorkshops.values());
+    localStorage.setItem('savedWorkshops', JSON.stringify(cleanedWorkshops));
+    
+    console.log(`Cleaned up workshops: ${workshops.length} -> ${cleanedWorkshops.length}`);
+  } catch (error) {
+    console.error('Error cleaning up duplicate workshops:', error);
+  }
+};

@@ -279,24 +279,6 @@ Genererad med Workshop Planner`;
           </div>
         ))}
       </div>
-      
-      <div className="mt-6 p-4 bg-gray-100 rounded-lg narrative-arc print-narrative">
-        <h3 className="font-semibold text-gray-900 mb-2">Narrativ båge:</h3>
-        <div className="flex flex-wrap gap-2 phase-flow">
-          {['Open', 'Diverge', 'Explore', 'Converge', 'Commit'].map((phase, index) => (
-            <div key={phase} className="flex items-center">
-              <span className={`px-3 py-1 rounded-full text-xs font-medium phase-item ${getPhaseColor(phase)}`}>
-                {phase}
-              </span>
-              {index < 4 && <ArrowRight className="w-4 h-4 text-gray-400 mx-1" />}
-            </div>
-          ))}
-        </div>
-        <p className="text-sm text-gray-600 mt-2">
-          Workshoppen följer en strukturerad narrativ båge från öppning till åtagande, 
-          där varje fas bygger på den föregående för att skapa en sammanhängande upplevelse.
-        </p>
-      </div>
 
       {workshop.sessions.length === 0 && (
         <div className="text-center py-12">

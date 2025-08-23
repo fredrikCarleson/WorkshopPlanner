@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Search, Filter } from 'lucide-react';
 import { liberatingStructures, getCategoryColor } from '../data/liberatingStructures';
 import { StructureCard } from './StructureCard';
@@ -17,9 +17,7 @@ export const StructureLibrary: React.FC = () => {
   });
 
   return (
-    <div className="bg-white rounded-lg shadow-lg p-6 mt-8">
-      <h2 className="text-2xl font-bold text-gray-900 mb-6">Liberating Structures-bibliotek</h2>
-      
+    <div>
       <div className="flex flex-col sm:flex-row gap-4 mb-6">
         <div className="flex-1 relative">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
