@@ -38,3 +38,22 @@ export interface Workshop {
   sessions: WorkshopSession[];
   totalTime: number; // minutes
 }
+
+export interface FormData {
+  hours: number;
+  participants: number;
+  purposes: string[];
+  context: string;
+  goals: string;
+}
+
+export interface SavedWorkshop {
+  id: string;
+  name: string;
+  createdAt: Date;
+  lastModified: Date;
+  status: 'draft' | 'completed';
+  formData?: FormData;
+  workshop?: Workshop;
+  url: string;
+}

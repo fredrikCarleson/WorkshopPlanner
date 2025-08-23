@@ -1,21 +1,25 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { WorkshopForm } from './components/WorkshopForm';
 import { WorkshopSchedule } from './components/WorkshopSchedule';
 import { StructureLibrary } from './components/StructureLibrary';
-import { Workshop } from './types/Workshop';
+import { WorkshopLibrary } from './components/WorkshopLibrary';
+import { Workshop, FormData, SavedWorkshop } from './types/Workshop';
 import { generateWorkshop } from './utils/workshopCalculator';
-
-interface FormData {
-  hours: number;
-  participants: number;
-  purposes: string[];
-  context: string;
-  goals: string;
-}
+import { 
+  saveWorkshop, 
+  saveDraft, 
+  autoSaveFormData, 
+  loadAutoSavedFormData,
+  getWorkshopById,
+  updateWorkshop
+} from './utils/workshopManager';
 
 function App() {
   const [workshop, setWorkshop] = useState<Workshop | null>(null);
   const [loading, setLoading] = useState(false);
+  const [currentWorkshopId, setCurrentWorkshopId] = useState<string | null>(null);
+  const [isAutoSaving, setIsAutoSaving] = useState(false);
+  const [lastSaved, setLastSaved] = useState<Date | undefined>();
   const [formData, setFormData] = useState<FormData>({
     hours: 4,
     participants: 12,
@@ -26,27 +30,78 @@ function App() {
 
   // Load saved data on component mount
   useEffect(() => {
-    const savedFormData = localStorage.getItem('formData');
-    const savedWorkshop = localStorage.getItem('workshop');
-    
-    if (savedFormData) {
-      setFormData(JSON.parse(savedFormData));
-    }
-    if (savedWorkshop) {
-      setWorkshop(JSON.parse(savedWorkshop));
-    }
+    loadInitialData();
   }, []);
 
-  // Save data whenever it changes
-  useEffect(() => {
-    localStorage.setItem('formData', JSON.stringify(formData));
-    if (workshop) {
-      localStorage.setItem('workshop', JSON.stringify(workshop));
+  const loadInitialData = () => {
+    // Check if we're loading a specific workshop from URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const workshopId = urlParams.get('workshop');
+    
+    if (workshopId) {
+      loadWorkshopById(workshopId);
+    } else {
+      // Load auto-saved form data or default data
+      const autoSavedData = loadAutoSavedFormData();
+      if (autoSavedData) {
+        setFormData(autoSavedData);
+      }
+      
+      // Load the last generated workshop
+      const savedWorkshop = localStorage.getItem('workshop');
+      if (savedWorkshop) {
+        setWorkshop(JSON.parse(savedWorkshop));
+      }
     }
-  }, [workshop, formData]);
+  };
+
+  const loadWorkshopById = (id: string) => {
+    const savedWorkshop = getWorkshopById(id);
+    if (savedWorkshop) {
+      setCurrentWorkshopId(id);
+      if (savedWorkshop.formData) {
+        setFormData(savedWorkshop.formData);
+      }
+      if (savedWorkshop.workshop) {
+        setWorkshop(savedWorkshop.workshop);
+      }
+    }
+  };
+
+  // Auto-save form data with debouncing
+  useEffect(() => {
+    setIsAutoSaving(true);
+    const timeoutId = setTimeout(() => {
+      autoSaveFormData(formData);
+      setIsAutoSaving(false);
+      setLastSaved(new Date());
+    }, 2000); // Save after 2 seconds of inactivity
+
+    return () => clearTimeout(timeoutId);
+  }, [formData]);
+
+  // Save workshop when it's generated
+  useEffect(() => {
+    if (workshop && !loading) {
+      const savedWorkshop = saveWorkshop(workshop, formData);
+      setCurrentWorkshopId(savedWorkshop.id);
+      
+      // Update URL to include workshop ID
+      const newUrl = new URL(window.location.href);
+      newUrl.searchParams.set('workshop', savedWorkshop.id);
+      window.history.replaceState({}, '', newUrl.toString());
+    }
+  }, [workshop, loading]);
 
   const handleGenerateWorkshop = () => {
     setLoading(true);
+    
+    // Save current form as draft
+    if (currentWorkshopId) {
+      updateWorkshop(currentWorkshopId, { formData, status: 'draft' });
+    } else {
+      saveDraft(formData);
+    }
     
     // Add a small delay to show loading state
     setTimeout(() => {
@@ -65,14 +120,53 @@ function App() {
     setFormData(prev => ({ ...prev, ...data }));
   };
 
+  const handleLoadWorkshop = (savedWorkshop: SavedWorkshop) => {
+    setCurrentWorkshopId(savedWorkshop.id);
+    if (savedWorkshop.formData) {
+      setFormData(savedWorkshop.formData);
+    }
+    if (savedWorkshop.workshop) {
+      setWorkshop(savedWorkshop.workshop);
+    }
+    
+    // Update URL
+    const newUrl = new URL(window.location.href);
+    newUrl.searchParams.set('workshop', savedWorkshop.id);
+    window.history.replaceState({}, '', newUrl.toString());
+  };
+
+  const handleNewWorkshop = () => {
+    setCurrentWorkshopId(null);
+    setWorkshop(null);
+    setFormData({
+      hours: 4,
+      participants: 12,
+      purposes: [],
+      context: '',
+      goals: ''
+    });
+    
+    // Clear URL parameters
+    const newUrl = new URL(window.location.href);
+    newUrl.searchParams.delete('workshop');
+    window.history.replaceState({}, '', newUrl.toString());
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="container mx-auto px-4 py-8 max-w-6xl">
+        <WorkshopLibrary 
+          onLoadWorkshop={handleLoadWorkshop}
+          onNewWorkshop={handleNewWorkshop}
+        />
+        
         <WorkshopForm 
           onGenerate={handleGenerateWorkshop} 
           formData={formData}
           onFormDataChange={handleFormDataChange}
           loading={loading}
+          isAutoSaving={isAutoSaving}
+          lastSaved={lastSaved}
         />
         
         {loading && (

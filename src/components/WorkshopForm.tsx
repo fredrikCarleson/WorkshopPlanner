@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Clock, Users, Play, FileText } from 'lucide-react';
 import { PurposeSelector } from './PurposeSelector';
+import { AutoSaveIndicator } from './AutoSaveIndicator';
 
 interface WorkshopFormProps {
   onGenerate: () => void;
@@ -13,10 +14,11 @@ interface WorkshopFormProps {
   };
   onFormDataChange: (data: Partial<WorkshopFormProps['formData']>) => void;
   loading: boolean;
+  isAutoSaving?: boolean;
+  lastSaved?: Date;
 }
 
-export const WorkshopForm: React.FC<WorkshopFormProps> = ({ onGenerate, formData, onFormDataChange, loading }) => {
-  const { hours, participants, purposes: selectedPurposes, context, goals } = formData;
+export const WorkshopForm: React.FC<WorkshopFormProps> = ({ onGenerate, formData, onFormDataChange, loading, isAutoSaving, lastSaved }) => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -28,9 +30,12 @@ export const WorkshopForm: React.FC<WorkshopFormProps> = ({ onGenerate, formData
       <h1 className="text-3xl font-bold text-gray-900 mb-6 text-center">
         Workshop planerare
       </h1>
-      <p className="text-gray-600 text-center mb-8">
+      <p className="text-gray-600 text-center mb-4">
         Skapa en workshop med Liberating Structures baserat på tid och antal deltagare
       </p>
+      <div className="text-center mb-6">
+        <AutoSaveIndicator isSaving={isAutoSaving || false} lastSaved={lastSaved} />
+      </div>
       
       <form onSubmit={handleSubmit} className="space-y-6">
         <div>

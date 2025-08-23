@@ -3,6 +3,29 @@ import { Clock, Users, ChevronDown, ChevronUp, Coffee } from 'lucide-react';
 import { LiberatingStructure } from '../types/Workshop';
 import { getCategoryColor } from '../data/liberatingStructures';
 
+// Utility function to format instructions with proper line breaks
+const formatInstructions = (instructions: string): string[] => {
+  // Handle cases where there are no numbered steps
+  if (!instructions.includes(')')) {
+    return [instructions];
+  }
+  
+  // Split by numbered steps (1), 2), 3), etc.)
+  const steps = instructions.split(/(?=\d+\))/);
+  
+  // Filter out empty strings and trim whitespace
+  return steps
+    .map(step => step.trim())
+    .filter(step => step.length > 0)
+    .map((step, index) => {
+      // If this is the first step and it doesn't start with a number, it might be introductory text
+      if (index === 0 && !step.match(/^\d+\)/)) {
+        return step;
+      }
+      return step;
+    });
+};
+
 interface StructureCardProps {
   structure: LiberatingStructure;
   duration?: number;
@@ -81,8 +104,26 @@ export const StructureCard: React.FC<StructureCardProps> = ({
       
       {(isExpanded || showDetails) && (
         <div className="bg-gray-50 rounded-md p-3 mb-3 session-instructions">
-          <h4 className="font-medium text-gray-900 mb-2">Genomförande:</h4>
-          <p className="text-gray-700 text-sm leading-relaxed">{structure.instructions}</p>
+          <h4 className="font-medium text-gray-900 mb-3">Genomförande:</h4>
+          <div className="text-gray-700 text-sm leading-relaxed space-y-3">
+            {formatInstructions(structure.instructions).map((step, index) => {
+              const isNumberedStep = step.match(/^\d+\)/);
+              return (
+                <div key={index} className="flex">
+                  {isNumberedStep ? (
+                    <div className="flex-shrink-0 w-6 h-6 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-xs font-medium mr-3 mt-0.5">
+                      {index + 1}
+                    </div>
+                  ) : (
+                    <div className="flex-shrink-0 w-6 mr-3"></div>
+                  )}
+                  <p className="flex-1">
+                    {step}
+                  </p>
+                </div>
+              );
+            })}
+          </div>
         </div>
       )}
       
