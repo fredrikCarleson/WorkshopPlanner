@@ -26,7 +26,7 @@ export const WorkshopForm: React.FC<WorkshopFormProps> = ({ onGenerate, formData
   return (
     <div className="bg-white rounded-lg shadow-lg p-6 mb-8">
       <h1 className="text-3xl font-bold text-gray-900 mb-6 text-center">
-        Workshopplanerare
+        Workshop planerare
       </h1>
       <p className="text-gray-600 text-center mb-8">
         Skapa en workshop med Liberating Structures baserat på tid och antal deltagare
