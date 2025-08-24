@@ -20,10 +20,10 @@ const getPhaseColor = (phase: string): string => {
 
 interface WorkshopScheduleProps {
   workshop: Workshop;
-  onRegenerate: () => void;
+  onReplaceActivity: (sessionIndex: number, newStructureId: string) => void;
 }
 
-export const WorkshopSchedule: React.FC<WorkshopScheduleProps> = ({ workshop, onRegenerate }) => {
+export const WorkshopSchedule: React.FC<WorkshopScheduleProps> = ({ workshop, onReplaceActivity }) => {
   const handleExport = () => {
     const selectedPurposeNames = workshop.purposes
       .map(id => purposes.find(p => p.id === id)?.name)
@@ -184,13 +184,6 @@ Genererad med Workshop Planner`;
         </div>
         <div className="flex gap-3 mt-4 sm:mt-0">
           <button
-            onClick={onRegenerate}
-            className="no-print flex items-center px-4 py-2 text-blue-600 bg-blue-50 rounded-md hover:bg-blue-100 transition-colors duration-200"
-          >
-            <RefreshCw className="w-4 h-4 mr-2" />
-            Regenerera
-          </button>
-          <button
             onClick={handleExportPDF}
             className="no-print flex items-center px-4 py-2 text-purple-600 bg-purple-50 rounded-md hover:bg-purple-100 transition-colors duration-200"
           >
@@ -241,6 +234,10 @@ Genererad med Workshop Planner`;
               <StructureCard 
                 structure={session.structure} 
                 duration={session.duration}
+                sessionIndex={index}
+                onReplaceActivity={onReplaceActivity}
+                isReplaceable={!['welcome', 'closing', 'short-break', 'long-break'].includes(session.structure.id)}
+                participants={workshop.participants}
               />
               
               <div className="mt-3 space-y-2 session-details">

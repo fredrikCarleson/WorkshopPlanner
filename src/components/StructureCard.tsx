@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
-import { Clock, Users, ChevronDown, ChevronUp, Coffee } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Clock, Users, ChevronDown, ChevronUp, Coffee, RefreshCw } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import { LiberatingStructure } from '../types/Workshop';
-import { getCategoryColor } from '../data/liberatingStructures';
+import { getCategoryColor, liberatingStructures } from '../data/liberatingStructures';
 
 
 
@@ -11,15 +11,56 @@ interface StructureCardProps {
   duration?: number;
   showDetails?: boolean;
   isBreak?: boolean;
+  sessionIndex?: number;
+  onReplaceActivity?: (sessionIndex: number, newStructureId: string) => void;
+  isReplaceable?: boolean;
+  participants?: number;
 }
 
 export const StructureCard: React.FC<StructureCardProps> = ({ 
   structure, 
   duration, 
   showDetails = false,
-  isBreak = false
+  isBreak = false,
+  sessionIndex,
+  onReplaceActivity,
+  isReplaceable = false,
+  participants = 12
 }) => {
   const [isExpanded, setIsExpanded] = useState(false);
+  const [showReplaceDropdown, setShowReplaceDropdown] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setShowReplaceDropdown(false);
+      }
+    };
+    
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+  
+  // Find compatible activities from the same category
+  const compatibleActivities = isReplaceable ? liberatingStructures.filter(s => 
+    s.category === structure.category && 
+    s.id !== structure.id &&
+    s.id !== 'welcome' && 
+    s.id !== 'closing' && 
+    s.id !== 'short-break' && 
+    s.id !== 'long-break'
+  ) : [];
+  
+  const handleReplaceActivity = (newStructureId: string) => {
+    if (onReplaceActivity && sessionIndex !== undefined) {
+      onReplaceActivity(sessionIndex, newStructureId);
+      setShowReplaceDropdown(false);
+    }
+  };
   
   if (isBreak) {
     return (
@@ -63,24 +104,67 @@ export const StructureCard: React.FC<StructureCardProps> = ({
       
       <p className="text-gray-600 text-sm mb-3">{structure.description}</p>
       
-      {!showDetails && (
-        <button
-          onClick={() => setIsExpanded(!isExpanded)}
-          className="no-print flex items-center text-blue-600 hover:text-blue-800 text-sm font-medium transition-colors duration-200 mb-3"
-        >
-          {isExpanded ? (
-            <>
-              <ChevronUp className="w-4 h-4 mr-1" />
-              Dölj instruktioner
-            </>
-          ) : (
-            <>
-              <ChevronDown className="w-4 h-4 mr-1" />
-              Visa instruktioner
-            </>
-          )}
-        </button>
-      )}
+      <div className="flex gap-2 mb-3">
+        {!showDetails && (
+          <button
+            onClick={() => setIsExpanded(!isExpanded)}
+            className="no-print flex items-center text-blue-600 hover:text-blue-800 text-sm font-medium transition-colors duration-200"
+          >
+            {isExpanded ? (
+              <>
+                <ChevronUp className="w-4 h-4 mr-1" />
+                Dölj instruktioner
+              </>
+            ) : (
+              <>
+                <ChevronDown className="w-4 h-4 mr-1" />
+                Visa instruktioner
+              </>
+            )}
+          </button>
+        )}
+        
+        {isReplaceable && compatibleActivities.length > 0 && (
+          <div className="relative" ref={dropdownRef}>
+            <button
+              onClick={() => setShowReplaceDropdown(!showReplaceDropdown)}
+              className="no-print flex items-center text-green-600 hover:text-green-800 text-sm font-medium transition-colors duration-200"
+            >
+              <RefreshCw className="w-4 h-4 mr-1" />
+              Byt övning
+            </button>
+            
+            {showReplaceDropdown && (
+              <div className="absolute top-full left-0 mt-1 bg-white border border-gray-200 rounded-md shadow-lg z-10 min-w-64">
+                <div className="p-2">
+                  <div className="text-xs font-medium text-gray-500 mb-2 px-2">
+                    Övningar från samma kategori ({structure.category}):
+                  </div>
+                  {compatibleActivities.map((activity) => {
+                    const baseDuration = activity.baseTime + (activity.scalingFactor * participants);
+                    const estimatedDuration = Math.ceil(baseDuration / 5) * 5;
+                    return (
+                      <button
+                        key={activity.id}
+                        onClick={() => handleReplaceActivity(activity.id)}
+                        className="w-full text-left p-2 hover:bg-gray-50 rounded text-sm flex items-center justify-between"
+                      >
+                        <div>
+                          <div className="font-medium text-gray-900">{activity.name}</div>
+                          <div className="text-xs text-gray-500">{activity.description}</div>
+                        </div>
+                        <div className="text-xs text-gray-400 ml-2">
+                          ~{estimatedDuration}min
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
       
       {(isExpanded || showDetails) && (
         <div className="bg-gray-50 rounded-md p-3 mb-3 session-instructions">

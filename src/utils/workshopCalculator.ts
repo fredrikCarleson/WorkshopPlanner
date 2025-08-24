@@ -1,6 +1,7 @@
 import { LiberatingStructure, Workshop, WorkshopSession } from '../types/Workshop';
 import { liberatingStructures } from '../data/liberatingStructures';
 import { purposes as purposesData } from '../data/purposes';
+import { loadWorkshopSessions, saveWorkshopSessions } from './workshopStorage';
 
 // Helper function to format minutes to HH:MM time string
 const formatMinutesToTime = (minutes: number): string => {
@@ -151,7 +152,44 @@ const getActivityRisks = (structure: LiberatingStructure, phase: string): { risk
   };
 };
 
-export const generateWorkshop = (hours: number, participants: number, purposes: string[], context: string, goals: string, startTime: string = "09:00"): Workshop => {
+// Generate a unique workshop ID based on parameters and timestamp
+export const generateWorkshopId = (
+  hours: number,
+  participants: number,
+  purposes: string[],
+  context: string,
+  goals: string,
+  startTime: string
+): string => {
+  // Create a hash from the parameters
+  const paramsString = `${hours}-${participants}-${purposes.sort().join(',')}-${context}-${goals}-${startTime}`;
+  
+  let hash = 0;
+  for (let i = 0; i < paramsString.length; i++) {
+    const char = paramsString.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash; // Convert to 32-bit integer
+  }
+  
+  const timestamp = Date.now();
+  const shortHash = Math.abs(hash).toString(36).substring(0, 8);
+  
+  return `${timestamp}-${shortHash}`;
+};
+
+export const generateWorkshop = (
+  hours: number, 
+  participants: number, 
+  purposes: string[], 
+  context: string, 
+  goals: string, 
+  startTime: string = "09:00"
+): Workshop => {
+  // Simple random selection for new workshops
+  const randomIndex = (max: number): number => {
+    return Math.floor(Math.random() * max);
+  };
+
   // Calculate welcome and closing durations based on workshop length
   const getWelcomeClosingDuration = (totalHours: number): number => {
     if (totalHours <= 2) return 10;
@@ -242,9 +280,9 @@ export const generateWorkshop = (hours: number, participants: number, purposes: 
       remainingMinutes -= breakDuration;
     }
 
-    // Select a random structure
-    const randomIndex = Math.floor(Math.random() * availableStructures.length);
-    const selectedStructure = availableStructures[randomIndex];
+    // Select a structure using seeded random or Math.random
+    const randomIndexValue = randomIndex(availableStructures.length);
+    const selectedStructure = availableStructures[randomIndexValue];
     
     // Calculate duration and round up to nearest 5 minutes
     const baseDuration = selectedStructure.baseTime + (selectedStructure.scalingFactor * participants);
@@ -273,7 +311,7 @@ export const generateWorkshop = (hours: number, participants: number, purposes: 
     }
     
     // Remove used structure to avoid repetition
-    availableStructures.splice(randomIndex, 1);
+    availableStructures.splice(randomIndexValue, 1);
   }
 
   // Add closing activity
@@ -319,6 +357,37 @@ export const generateWorkshop = (hours: number, participants: number, purposes: 
     totalTime: currentTime + welcomeClosingDuration,
     startTime
   };
+};
+
+/**
+ * Generate or load workshop sessions based on workshop ID
+ * If sessions exist for the workshop ID, load them. Otherwise generate new ones.
+ */
+export const generateOrLoadWorkshopSessions = (
+  workshopId: string,
+  hours: number, 
+  participants: number, 
+  purposes: string[], 
+  context: string, 
+  goals: string, 
+  startTime: string = "09:00"
+): WorkshopSession[] => {
+  // Try to load existing sessions first
+  const existingSessions = loadWorkshopSessions(workshopId);
+  
+  if (existingSessions) {
+    console.log(`Loaded existing sessions for workshop ${workshopId}`);
+    return existingSessions;
+  }
+  
+  // Generate new sessions if none exist
+  console.log(`Generating new sessions for workshop ${workshopId}`);
+  const newSessions = generateWorkshop(hours, participants, purposes, context, goals, startTime).sessions;
+  
+  // Save the new sessions
+  saveWorkshopSessions(workshopId, newSessions);
+  
+  return newSessions;
 };
 
 export const formatTime = (totalMinutes: number): string => {

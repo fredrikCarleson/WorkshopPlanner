@@ -5,7 +5,8 @@ import { StructureLibrary } from './components/StructureLibrary';
 import { WorkshopLibrary } from './components/WorkshopLibrary';
 import { NarrativeArc } from './components/NarrativeArc';
 import { Workshop, FormData, SavedWorkshop } from './types/Workshop';
-import { generateWorkshop } from './utils/workshopCalculator';
+import { generateWorkshop, generateWorkshopId, generateOrLoadWorkshopSessions } from './utils/workshopCalculator';
+import { liberatingStructures } from './data/liberatingStructures';
 import { 
   saveWorkshop, 
   saveDraft, 
@@ -17,6 +18,30 @@ import {
   migrateDataFromOtherPorts,
   backupDataForPortChange
 } from './utils/workshopManager';
+import { saveWorkshopSessions } from './utils/workshopStorage';
+
+// Helper functions for time calculations
+const timeStringToMinutes = (timeString: string): number => {
+  const [hours, minutes] = timeString.split(':').map(Number);
+  return hours * 60 + minutes;
+};
+
+const calculateAbsoluteTimes = (startTime: string, relativeStartMinutes: number, duration: number): { startTime: string; endTime: string } => {
+  const workshopStartMinutes = timeStringToMinutes(startTime);
+  const absoluteStartMinutes = workshopStartMinutes + relativeStartMinutes;
+  const absoluteEndMinutes = absoluteStartMinutes + duration;
+  
+  const minutesToTimeString = (minutes: number): string => {
+    const hours = Math.floor(minutes / 60);
+    const mins = minutes % 60;
+    return `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}`;
+  };
+  
+  return {
+    startTime: minutesToTimeString(absoluteStartMinutes),
+    endTime: minutesToTimeString(absoluteEndMinutes)
+  };
+};
 
 function App() {
   const [workshop, setWorkshop] = useState<Workshop | null>(null);
@@ -25,7 +50,7 @@ function App() {
   const [isAutoSaving, setIsAutoSaving] = useState(false);
   const [lastSaved, setLastSaved] = useState<Date | undefined>();
   const [isLibraryExpanded, setIsLibraryExpanded] = useState(false);
-  const [hasStructuralChanges, setHasStructuralChanges] = useState(false);
+  const [isLoadingSavedWorkshop, setIsLoadingSavedWorkshop] = useState(false);
   const [formData, setFormData] = useState<FormData>({
     hours: 4,
     participants: 12,
@@ -79,9 +104,10 @@ function App() {
   };
 
   const loadWorkshopById = (id: string) => {
+    setIsLoadingSavedWorkshop(true);
+    setCurrentWorkshopId(id); // Set this immediately to prevent live preview
     const savedWorkshop = getWorkshopById(id);
     if (savedWorkshop) {
-      setCurrentWorkshopId(id);
       if (savedWorkshop.formData) {
         setFormData(savedWorkshop.formData);
       }
@@ -89,6 +115,8 @@ function App() {
         setWorkshop(savedWorkshop.workshop);
       }
     }
+    // Reset the flag after a longer delay to ensure workshop is fully loaded
+    setTimeout(() => setIsLoadingSavedWorkshop(false), 2000);
   };
 
   // Auto-save form data with debouncing
@@ -103,12 +131,14 @@ function App() {
     return () => clearTimeout(timeoutId);
   }, [formData]);
 
-  // Live preview - regenerate workshop when form data changes (excluding structural changes)
+  // Live preview - regenerate workshop when form data changes
   useEffect(() => {
-    // Only regenerate if we have the required fields and we're not currently loading
-    if (formData.context.trim() && formData.goals.trim() && !loading) {
+    // Only generate live preview if we don't have a current workshop ID (i.e., not loading a saved workshop)
+    // AND we're not currently loading a saved workshop
+    if (formData.context.trim() && formData.goals.trim() && !loading && !isLoadingSavedWorkshop && !currentWorkshopId) {
       const timeoutId = setTimeout(() => {
-        const newWorkshop = generateWorkshop(
+        // Generate a workshop ID based on current parameters
+        const workshopId = generateWorkshopId(
           formData.hours, 
           formData.participants, 
           formData.purposes, 
@@ -116,28 +146,52 @@ function App() {
           formData.goals, 
           formData.startTime
         );
+        
+        // Generate or load sessions based on the workshop ID
+        const sessions = generateOrLoadWorkshopSessions(
+          workshopId,
+          formData.hours, 
+          formData.participants, 
+          formData.purposes, 
+          formData.context, 
+          formData.goals, 
+          formData.startTime
+        );
+        
+        // Create workshop object with loaded/generated sessions
+        const newWorkshop: Workshop = {
+          id: workshopId,
+          title: `Workshop ${formData.hours}h - ${formData.participants} deltagare`,
+          duration: formData.hours,
+          participants: formData.participants,
+          purposes: formData.purposes,
+          context: formData.context,
+          goals: formData.goals,
+          sessions,
+          totalTime: sessions.reduce((total, session) => total + session.duration, 0),
+          startTime: formData.startTime
+        };
+        
         setWorkshop(newWorkshop);
       }, 500); // Small delay to prevent too frequent regenerations
 
       return () => clearTimeout(timeoutId);
     }
-  }, [formData.context, formData.goals, formData.participants, formData.startTime, loading, currentWorkshopId]);
+  }, [formData.context, formData.goals, formData.participants, formData.startTime, formData.hours, formData.purposes, loading, isLoadingSavedWorkshop, currentWorkshopId]);
 
-  // Track structural changes (hours and purposes)
-  useEffect(() => {
+  // No automatic saving - workshops are only saved when explicitly requested
+
+  const handleSaveWorkshop = () => {
     if (workshop) {
-      const hoursChanged = workshop.duration !== formData.hours;
-      const purposesChanged = JSON.stringify(workshop.purposes.sort()) !== JSON.stringify(formData.purposes.sort());
-      setHasStructuralChanges(hoursChanged || purposesChanged);
-    }
-  }, [formData.hours, formData.purposes, workshop]);
-
-  // Save workshop when it's generated
-  useEffect(() => {
-    if (workshop && !loading) {
-      // Only save as new workshop if we don't have a current workshop ID
-      // or if this is a completely new workshop (not just a regeneration)
-      if (!currentWorkshopId) {
+      // Save the current workshop exactly as it is
+      if (currentWorkshopId) {
+        updateWorkshop(currentWorkshopId, { 
+          workshop, 
+          formData, 
+          status: 'completed',
+          lastModified: new Date()
+        });
+      } else {
         const savedWorkshop = saveWorkshop(workshop, formData);
         setCurrentWorkshopId(savedWorkshop.id);
         
@@ -145,31 +199,21 @@ function App() {
         const newUrl = new URL(window.location.href);
         newUrl.searchParams.set('workshop', savedWorkshop.id);
         window.history.replaceState({}, '', newUrl.toString());
-      } else {
-        // Update existing workshop instead of creating a new one
-        updateWorkshop(currentWorkshopId, { 
-          workshop, 
-          formData, 
-          status: 'completed',
-          lastModified: new Date()
-        });
       }
+      setLastSaved(new Date());
     }
-  }, [workshop, loading, currentWorkshopId, formData]);
+  };
 
-  const handleGenerateWorkshop = () => {
+  const handleRegenerate = () => {
     setLoading(true);
     
-    // Save current form as draft
-    if (currentWorkshopId) {
-      updateWorkshop(currentWorkshopId, { formData, status: 'draft' });
-    } else {
-      saveDraft(formData);
-    }
+    // Clear current workshop ID since we're creating a new workshop
+    setCurrentWorkshopId(null);
     
-    // Regenerate workshop with current form data
+    // Generate a completely new workshop with current form data
     setTimeout(() => {
-      const newWorkshop = generateWorkshop(
+      // Generate a new workshop ID (this will be different due to timestamp)
+      const newWorkshopId = generateWorkshopId(
         formData.hours, 
         formData.participants, 
         formData.purposes, 
@@ -177,15 +221,98 @@ function App() {
         formData.goals, 
         formData.startTime
       );
+      
+      // Generate new sessions (this will create new ones since the ID is different)
+      const newSessions = generateOrLoadWorkshopSessions(
+        newWorkshopId,
+        formData.hours, 
+        formData.participants, 
+        formData.purposes, 
+        formData.context, 
+        formData.goals, 
+        formData.startTime
+      );
+      
+      // Create new workshop object
+      const newWorkshop: Workshop = {
+        id: newWorkshopId,
+        title: `Workshop ${formData.hours}h - ${formData.participants} deltagare`,
+        duration: formData.hours,
+        participants: formData.participants,
+        purposes: formData.purposes,
+        context: formData.context,
+        goals: formData.goals,
+        sessions: newSessions,
+        totalTime: newSessions.reduce((total, session) => total + session.duration, 0),
+        startTime: formData.startTime
+      };
+      
       setWorkshop(newWorkshop);
-      setHasStructuralChanges(false);
       setLoading(false);
+      
+      // Clear URL parameter since this is a new workshop
+      const newUrl = new URL(window.location.href);
+      newUrl.searchParams.delete('workshop');
+      window.history.replaceState({}, '', newUrl.toString());
     }, 800);
   };
 
-  const handleRegenerate = () => {
-    // Only regenerate, don't clear form data
-    handleGenerateWorkshop();
+  const handleReplaceActivity = (sessionIndex: number, newStructureId: string) => {
+    if (!workshop) return;
+    
+    // Find the new structure
+    const newStructure = liberatingStructures.find(s => s.id === newStructureId);
+    if (!newStructure) return;
+    
+    // Calculate new duration for the new structure
+    const baseDuration = newStructure.baseTime + (newStructure.scalingFactor * formData.participants);
+    const newDuration = Math.ceil(baseDuration / 5) * 5;
+    
+    // Create a copy of the workshop sessions
+    const updatedSessions = [...workshop.sessions];
+    const oldSession = updatedSessions[sessionIndex];
+    
+    // Update the session with new structure and duration
+    updatedSessions[sessionIndex] = {
+      ...oldSession,
+      structure: newStructure,
+      duration: newDuration
+    };
+    
+    // Recalculate times for all subsequent sessions
+    let currentTime = timeStringToMinutes(workshop.startTime);
+    for (let i = 0; i < updatedSessions.length; i++) {
+      const session = updatedSessions[i];
+      const sessionTimes = calculateAbsoluteTimes(workshop.startTime, currentTime, session.duration);
+      updatedSessions[i] = {
+        ...session,
+        startTime: sessionTimes.startTime,
+        endTime: sessionTimes.endTime
+      };
+      currentTime += session.duration;
+    }
+    
+    // Create updated workshop
+    const updatedWorkshop = {
+      ...workshop,
+      sessions: updatedSessions,
+      totalTime: currentTime - timeStringToMinutes(workshop.startTime)
+    };
+    
+    setWorkshop(updatedWorkshop);
+    
+    // Auto-save the change
+    if (currentWorkshopId) {
+      updateWorkshop(currentWorkshopId, { 
+        workshop: updatedWorkshop, 
+        formData, 
+        status: 'completed',
+        lastModified: new Date()
+      });
+      
+      // Also save the updated sessions
+      saveWorkshopSessions(currentWorkshopId, updatedSessions);
+    }
   };
 
   const handleFormDataChange = (data: Partial<FormData>) => {
@@ -193,6 +320,7 @@ function App() {
   };
 
   const handleLoadWorkshop = (savedWorkshop: SavedWorkshop) => {
+    setIsLoadingSavedWorkshop(true);
     setCurrentWorkshopId(savedWorkshop.id);
     if (savedWorkshop.formData) {
       setFormData(savedWorkshop.formData);
@@ -205,6 +333,9 @@ function App() {
     const newUrl = new URL(window.location.href);
     newUrl.searchParams.set('workshop', savedWorkshop.id);
     window.history.replaceState({}, '', newUrl.toString());
+    
+    // Reset the flag after a longer delay to ensure workshop is fully loaded
+    setTimeout(() => setIsLoadingSavedWorkshop(false), 2000);
   };
 
   const handleNewWorkshop = () => {
@@ -237,15 +368,14 @@ function App() {
               onNewWorkshop={handleNewWorkshop}
             />
             
-            <WorkshopForm 
-              onGenerate={handleGenerateWorkshop} 
-              formData={formData}
-              onFormDataChange={handleFormDataChange}
-              loading={loading}
-              isAutoSaving={isAutoSaving}
-              lastSaved={lastSaved}
-              hasStructuralChanges={hasStructuralChanges}
-            />
+                         <WorkshopForm 
+               onSave={handleSaveWorkshop}
+               onRegenerate={handleRegenerate}
+               formData={formData}
+               onFormDataChange={handleFormDataChange}
+               loading={loading}
+               hasWorkshop={!!workshop}
+             />
           </div>
 
           {/* Right Pane - Workshop Output (3/5 width) */}
@@ -259,12 +389,12 @@ function App() {
               </div>
             )}
             
-            {workshop && !loading && (
-              <WorkshopSchedule 
-                workshop={workshop} 
-                onRegenerate={handleRegenerate}
-              />
-            )}
+                         {workshop && !loading && (
+               <WorkshopSchedule 
+                 workshop={workshop} 
+                 onReplaceActivity={handleReplaceActivity}
+               />
+             )}
 
             {!workshop && !loading && (
               <div className="bg-white rounded-lg shadow-lg p-12 text-center">
