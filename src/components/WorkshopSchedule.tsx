@@ -40,6 +40,7 @@ MÅL:
 ${workshop.goals}
 
 Duration: ${workshop.duration} timmar
+Starttid: ${workshop.startTime}
 Deltagare: ${workshop.participants}
 ${selectedPurposeNames ? `Huvudsyfte: ${selectedPurposeNames}` : ''}
 Total aktivitetstid: ${formatTime(workshop.totalTime)}
@@ -168,6 +169,10 @@ Genererad med Workshop Planner`;
               {workshop.duration} timmar total
             </div>
             <div className="flex items-center">
+              <Clock className="w-4 h-4 mr-1" />
+              Starttid: {workshop.startTime}
+            </div>
+            <div className="flex items-center">
               <Users className="w-4 h-4 mr-1" />
               {workshop.participants} deltagare
             </div>
@@ -220,12 +225,12 @@ Genererad med Workshop Planner`;
         {workshop.sessions.map((session, index) => (
           <div key={session.id} className="border rounded-lg p-4 bg-gray-50 workshop-session print-avoid-break">
             <div className="flex items-start justify-between mb-3 session-header">
-              <div className="flex items-center gap-3">
-                <div className="flex-shrink-0 w-20 text-sm text-gray-500 session-time">
-                  {session.startTime}
-                  <br />
-                  <span className="text-xs">({session.duration}min)</span>
-                </div>
+                          <div className="flex items-center gap-3">
+              <div className="flex-shrink-0 w-24 text-sm text-gray-500 session-time">
+                {session.startTime} - {session.endTime}
+                <br />
+                <span className="text-xs">({session.duration}min)</span>
+              </div>
                 <span className={`px-2 py-1 rounded-full text-xs font-medium session-phase ${getPhaseColor(session.phase)}`}>
                   {session.phase}
                 </span>

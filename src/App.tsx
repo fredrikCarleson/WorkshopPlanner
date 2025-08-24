@@ -13,7 +13,9 @@ import {
   loadAutoSavedFormData,
   getWorkshopById,
   updateWorkshop,
-  cleanupDuplicateWorkshops
+  cleanupDuplicateWorkshops,
+  migrateDataFromOtherPorts,
+  backupDataForPortChange
 } from './utils/workshopManager';
 
 function App() {
@@ -23,19 +25,35 @@ function App() {
   const [isAutoSaving, setIsAutoSaving] = useState(false);
   const [lastSaved, setLastSaved] = useState<Date | undefined>();
   const [isLibraryExpanded, setIsLibraryExpanded] = useState(false);
+  const [hasStructuralChanges, setHasStructuralChanges] = useState(false);
   const [formData, setFormData] = useState<FormData>({
     hours: 4,
     participants: 12,
     purposes: [],
     context: '',
-    goals: ''
+    goals: '',
+    startTime: '09:00'
   });
 
   // Load saved data on component mount
   useEffect(() => {
+    // Migrate data from other ports if needed
+    migrateDataFromOtherPorts();
     // Clean up any duplicate workshops first
     cleanupDuplicateWorkshops();
     loadInitialData();
+  }, []);
+
+  // Backup data before page unload
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      backupDataForPortChange();
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
   }, []);
 
   const loadInitialData = () => {
@@ -85,6 +103,35 @@ function App() {
     return () => clearTimeout(timeoutId);
   }, [formData]);
 
+  // Live preview - regenerate workshop when form data changes (excluding structural changes)
+  useEffect(() => {
+    // Only regenerate if we have the required fields and we're not currently loading
+    if (formData.context.trim() && formData.goals.trim() && !loading) {
+      const timeoutId = setTimeout(() => {
+        const newWorkshop = generateWorkshop(
+          formData.hours, 
+          formData.participants, 
+          formData.purposes, 
+          formData.context, 
+          formData.goals, 
+          formData.startTime
+        );
+        setWorkshop(newWorkshop);
+      }, 500); // Small delay to prevent too frequent regenerations
+
+      return () => clearTimeout(timeoutId);
+    }
+  }, [formData.context, formData.goals, formData.participants, formData.startTime, loading, currentWorkshopId]);
+
+  // Track structural changes (hours and purposes)
+  useEffect(() => {
+    if (workshop) {
+      const hoursChanged = workshop.duration !== formData.hours;
+      const purposesChanged = JSON.stringify(workshop.purposes.sort()) !== JSON.stringify(formData.purposes.sort());
+      setHasStructuralChanges(hoursChanged || purposesChanged);
+    }
+  }, [formData.hours, formData.purposes, workshop]);
+
   // Save workshop when it's generated
   useEffect(() => {
     if (workshop && !loading) {
@@ -120,10 +167,18 @@ function App() {
       saveDraft(formData);
     }
     
-    // Add a small delay to show loading state
+    // Regenerate workshop with current form data
     setTimeout(() => {
-      const newWorkshop = generateWorkshop(formData.hours, formData.participants, formData.purposes, formData.context, formData.goals);
+      const newWorkshop = generateWorkshop(
+        formData.hours, 
+        formData.participants, 
+        formData.purposes, 
+        formData.context, 
+        formData.goals, 
+        formData.startTime
+      );
       setWorkshop(newWorkshop);
+      setHasStructuralChanges(false);
       setLoading(false);
     }, 800);
   };
@@ -160,7 +215,8 @@ function App() {
       participants: 12,
       purposes: [],
       context: '',
-      goals: ''
+      goals: '',
+      startTime: '09:00'
     });
     
     // Clear URL parameters
@@ -188,6 +244,7 @@ function App() {
               loading={loading}
               isAutoSaving={isAutoSaving}
               lastSaved={lastSaved}
+              hasStructuralChanges={hasStructuralChanges}
             />
           </div>
 
@@ -218,7 +275,7 @@ function App() {
                 </div>
                 <h3 className="text-lg font-medium text-gray-900 mb-2">Ingen workshop genererad än</h3>
                 <p className="text-gray-600">
-                  Fyll i formuläret till vänster och klicka "Generera Workshop" för att komma igång.
+                  Fyll i formuläret till vänster för att se förhandsvisningen av workshoppen.
                 </p>
               </div>
             )}

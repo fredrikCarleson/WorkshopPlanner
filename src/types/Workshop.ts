@@ -37,6 +37,7 @@ export interface Workshop {
   goals: string;
   sessions: WorkshopSession[];
   totalTime: number; // minutes
+  startTime: string; // Format: "HH:MM" (e.g., "08:00")
 }
 
 export interface FormData {
@@ -45,6 +46,7 @@ export interface FormData {
   purposes: string[];
   context: string;
   goals: string;
+  startTime: string; // Format: "HH:MM" (e.g., "08:00")
 }
 
 export interface SavedWorkshop {

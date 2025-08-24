@@ -1,12 +1,37 @@
 import { LiberatingStructure, Workshop, WorkshopSession } from '../types/Workshop';
 import { liberatingStructures } from '../data/liberatingStructures';
-import { purposes } from '../data/purposes';
+import { purposes as purposesData } from '../data/purposes';
 
 // Helper function to format minutes to HH:MM time string
 const formatMinutesToTime = (minutes: number): string => {
   const hours = Math.floor(minutes / 60);
   const mins = minutes % 60;
   return `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}`;
+};
+
+// Helper function to convert time string to minutes since midnight
+const timeStringToMinutes = (timeString: string): number => {
+  const [hours, minutes] = timeString.split(':').map(Number);
+  return hours * 60 + minutes;
+};
+
+// Helper function to convert minutes since midnight to time string
+const minutesToTimeString = (minutes: number): string => {
+  const hours = Math.floor(minutes / 60);
+  const mins = minutes % 60;
+  return `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}`;
+};
+
+// Helper function to calculate absolute start and end times
+const calculateAbsoluteTimes = (startTime: string, relativeStartMinutes: number, duration: number): { startTime: string; endTime: string } => {
+  const workshopStartMinutes = timeStringToMinutes(startTime);
+  const absoluteStartMinutes = workshopStartMinutes + relativeStartMinutes;
+  const absoluteEndMinutes = absoluteStartMinutes + duration;
+  
+  return {
+    startTime: minutesToTimeString(absoluteStartMinutes),
+    endTime: minutesToTimeString(absoluteEndMinutes)
+  };
 };
 
 const getPhaseForActivity = (activityIndex: number, totalActivities: number, activityId: string): 'Open' | 'Diverge' | 'Explore' | 'Converge' | 'Commit' => {
@@ -126,7 +151,7 @@ const getActivityRisks = (structure: LiberatingStructure, phase: string): { risk
   };
 };
 
-export const generateWorkshop = (hours: number, participants: number, purposes: string[], context: string, goals: string): Workshop => {
+export const generateWorkshop = (hours: number, participants: number, purposes: string[], context: string, goals: string, startTime: string = "09:00"): Workshop => {
   // Calculate welcome and closing durations based on workshop length
   const getWelcomeClosingDuration = (totalHours: number): number => {
     if (totalHours <= 2) return 10;
@@ -150,8 +175,8 @@ export const generateWorkshop = (hours: number, participants: number, purposes: 
   // If purposes are selected, prioritize recommended structures
   if (purposes.length > 0) {
     const recommendedStructures = availableStructures.filter(structure => {
-      return purposes.some(purpose => {
-        const purposeData = purposes.find(p => p.id === purpose);
+      return purposes.some(purposeId => {
+        const purposeData = purposesData.find(p => p.id === purposeId);
         return purposeData?.recommendedStructures.includes(structure.id);
       });
     });
@@ -169,12 +194,13 @@ export const generateWorkshop = (hours: number, participants: number, purposes: 
   const welcomeStructure = liberatingStructures.find(s => s.id === 'welcome')!;
   const welcomePhase = getPhaseForActivity(0, 0, 'welcome');
   const welcomeRiskMitigation = getActivityRisks(welcomeStructure, welcomePhase);
+  const welcomeTimes = calculateAbsoluteTimes(startTime, currentTime, welcomeClosingDuration);
   sessions.push({
     id: `session-${sessions.length}`,
     structure: welcomeStructure,
     duration: welcomeClosingDuration,
-    startTime: formatMinutesToTime(currentTime),
-    endTime: formatMinutesToTime(currentTime + welcomeClosingDuration),
+    startTime: welcomeTimes.startTime,
+    endTime: welcomeTimes.endTime,
     purpose: getActivityPurpose(welcomeStructure, welcomePhase, context),
     output: getActivityOutput(welcomeStructure, welcomePhase),
     transition: '',
@@ -197,12 +223,13 @@ export const generateWorkshop = (hours: number, participants: number, purposes: 
       )!;
       const breakPhase = getPhaseForActivity(sessions.length, sessions.length + 5, breakStructure.id);
       const breakRiskMitigation = getActivityRisks(breakStructure, breakPhase);
+      const breakTimes = calculateAbsoluteTimes(startTime, currentTime, breakDuration);
       sessions.push({
         id: `session-${sessions.length}`,
         structure: breakStructure,
         duration: breakDuration,
-        startTime: formatMinutesToTime(currentTime),
-        endTime: formatMinutesToTime(currentTime + breakDuration),
+        startTime: breakTimes.startTime,
+        endTime: breakTimes.endTime,
         purpose: getActivityPurpose(breakStructure, breakPhase, context),
         output: getActivityOutput(breakStructure, breakPhase),
         transition: '',
@@ -226,12 +253,13 @@ export const generateWorkshop = (hours: number, participants: number, purposes: 
     if (roundedDuration <= remainingMinutes) {
       const activityPhase = getPhaseForActivity(sessions.length, sessions.length + 5, selectedStructure.id);
       const activityRiskMitigation = getActivityRisks(selectedStructure, activityPhase);
+      const activityTimes = calculateAbsoluteTimes(startTime, currentTime, roundedDuration);
       sessions.push({
         id: `session-${sessions.length}`,
         structure: selectedStructure,
         duration: roundedDuration,
-        startTime: formatMinutesToTime(currentTime),
-        endTime: formatMinutesToTime(currentTime + roundedDuration),
+        startTime: activityTimes.startTime,
+        endTime: activityTimes.endTime,
         purpose: getActivityPurpose(selectedStructure, activityPhase, context),
         output: getActivityOutput(selectedStructure, activityPhase),
         transition: '',
@@ -252,12 +280,13 @@ export const generateWorkshop = (hours: number, participants: number, purposes: 
   const closingStructure = liberatingStructures.find(s => s.id === 'closing')!;
   const closingPhase = getPhaseForActivity(sessions.length, sessions.length, 'closing');
   const closingRiskMitigation = getActivityRisks(closingStructure, closingPhase);
+  const closingTimes = calculateAbsoluteTimes(startTime, currentTime, welcomeClosingDuration);
   sessions.push({
     id: `session-${sessions.length}`,
     structure: closingStructure,
     duration: welcomeClosingDuration,
-    startTime: formatMinutesToTime(currentTime),
-    endTime: formatMinutesToTime(currentTime + welcomeClosingDuration),
+    startTime: closingTimes.startTime,
+    endTime: closingTimes.endTime,
     purpose: getActivityPurpose(closingStructure, closingPhase, context),
     output: getActivityOutput(closingStructure, closingPhase),
     transition: '',
@@ -287,7 +316,8 @@ export const generateWorkshop = (hours: number, participants: number, purposes: 
     context,
     goals,
     sessions,
-    totalTime: currentTime + welcomeClosingDuration
+    totalTime: currentTime + welcomeClosingDuration,
+    startTime
   };
 };
 

@@ -199,3 +199,51 @@ export const cleanupDuplicateWorkshops = (): void => {
     console.error('Error cleaning up duplicate workshops:', error);
   }
 };
+
+// Migrate data from other ports if needed
+export const migrateDataFromOtherPorts = (): void => {
+  try {
+    // Check if we have any data from other ports in sessionStorage
+    const sessionData = sessionStorage.getItem('workshopDataMigration');
+    if (sessionData) {
+      const data = JSON.parse(sessionData);
+      
+      // Migrate workshops
+      if (data.workshops) {
+        const existingWorkshops = getSavedWorkshops();
+        const mergedWorkshops = [...existingWorkshops, ...data.workshops];
+        localStorage.setItem('savedWorkshops', JSON.stringify(mergedWorkshops));
+      }
+      
+      // Migrate form data
+      if (data.formData) {
+        localStorage.setItem('autoSavedFormData', JSON.stringify(data.formData));
+      }
+      
+      // Clear session data
+      sessionStorage.removeItem('workshopDataMigration');
+      console.log('Data migration completed');
+    }
+  } catch (error) {
+    console.error('Error migrating data:', error);
+  }
+};
+
+// Backup data to sessionStorage before port change
+export const backupDataForPortChange = (): void => {
+  try {
+    const workshops = getSavedWorkshops();
+    const formData = localStorage.getItem('autoSavedFormData');
+    
+    const backupData = {
+      workshops,
+      formData: formData ? JSON.parse(formData) : null,
+      timestamp: new Date().toISOString()
+    };
+    
+    sessionStorage.setItem('workshopDataMigration', JSON.stringify(backupData));
+    console.log('Data backed up for port migration');
+  } catch (error) {
+    console.error('Error backing up data:', error);
+  }
+};
