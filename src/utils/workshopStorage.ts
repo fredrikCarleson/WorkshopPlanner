@@ -1,4 +1,4 @@
-import { Workshop, WorkshopSession } from '../types/Workshop';
+import { WorkshopSession } from '../types/Workshop';
 
 // Storage key prefix for workshop sessions
 const WORKSHOP_SESSIONS_PREFIX = 'workshop_sessions_';
@@ -11,7 +11,10 @@ export const saveWorkshopSessions = (workshopId: string, sessions: WorkshopSessi
   try {
     localStorage.setItem(storageKey, JSON.stringify(sessions));
   } catch (error) {
-    console.error('Failed to save workshop sessions:', error);
+    // In production, log to a proper logging service instead of console
+    if (process.env.NODE_ENV === 'development') {
+      console.error('Failed to save workshop sessions:', error);
+    }
   }
 };
 
@@ -26,7 +29,10 @@ export const loadWorkshopSessions = (workshopId: string): WorkshopSession[] | nu
       return JSON.parse(savedSessions);
     }
   } catch (error) {
-    console.error('Failed to load workshop sessions:', error);
+    // In production, log to a proper logging service instead of console
+    if (process.env.NODE_ENV === 'development') {
+      console.error('Failed to load workshop sessions:', error);
+    }
   }
   return null;
 };
@@ -39,7 +45,10 @@ export const deleteWorkshopSessions = (workshopId: string): void => {
   try {
     localStorage.removeItem(storageKey);
   } catch (error) {
-    console.error('Failed to delete workshop sessions:', error);
+    // In production, log to a proper logging service instead of console
+    if (process.env.NODE_ENV === 'development') {
+      console.error('Failed to delete workshop sessions:', error);
+    }
   }
 };
 
@@ -75,7 +84,10 @@ export const cleanupOrphanedSessions = (existingWorkshopIds: string[]): void => 
     const workshopId = key.replace(WORKSHOP_SESSIONS_PREFIX, '');
     if (!existingWorkshopIds.includes(workshopId)) {
       localStorage.removeItem(key);
-      console.log(`Cleaned up orphaned sessions for workshop: ${workshopId}`);
+      // Only log in development
+      if (process.env.NODE_ENV === 'development') {
+        console.log(`Cleaned up orphaned sessions for workshop: ${workshopId}`);
+      }
     }
   });
 };

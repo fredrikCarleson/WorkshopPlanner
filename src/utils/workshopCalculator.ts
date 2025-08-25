@@ -376,12 +376,18 @@ export const generateOrLoadWorkshopSessions = (
   const existingSessions = loadWorkshopSessions(workshopId);
   
   if (existingSessions) {
-    console.log(`Loaded existing sessions for workshop ${workshopId}`);
+    // Only log in development
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`Loaded existing sessions for workshop ${workshopId}`);
+    }
     return existingSessions;
   }
   
   // Generate new sessions if none exist
-  console.log(`Generating new sessions for workshop ${workshopId}`);
+  // Only log in development
+  if (process.env.NODE_ENV === 'development') {
+    console.log(`Generating new sessions for workshop ${workshopId}`);
+  }
   const newSessions = generateWorkshop(hours, participants, purposes, context, goals, startTime).sessions;
   
   // Save the new sessions

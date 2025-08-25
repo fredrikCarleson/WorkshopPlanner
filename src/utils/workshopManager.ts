@@ -27,7 +27,10 @@ export const compressWorkshopData = (workshop: Workshop): string => {
     const compressed = JSON.stringify(workshop);
     return btoa(compressed);
   } catch (error) {
-    console.error('Error compressing workshop data:', error);
+    // In production, log to a proper logging service instead of console
+    if (process.env.NODE_ENV === 'development') {
+      console.error('Error compressing workshop data:', error);
+    }
     return '';
   }
 };
@@ -38,7 +41,10 @@ export const decompressWorkshopData = (compressed: string): Workshop | null => {
     const decompressed = atob(compressed);
     return JSON.parse(decompressed);
   } catch (error) {
-    console.error('Error decompressing workshop data:', error);
+    // In production, log to a proper logging service instead of console
+    if (process.env.NODE_ENV === 'development') {
+      console.error('Error decompressing workshop data:', error);
+    }
     return null;
   }
 };
@@ -99,14 +105,17 @@ export const getSavedWorkshops = (): SavedWorkshop[] => {
     if (saved) {
       const workshops = JSON.parse(saved);
       // Convert date strings back to Date objects
-      return workshops.map((w: any) => ({
+      return workshops.map((w: SavedWorkshop & { createdAt: string; lastModified: string }) => ({
         ...w,
         createdAt: new Date(w.createdAt),
         lastModified: new Date(w.lastModified)
       }));
     }
   } catch (error) {
-    console.error('Error loading saved workshops:', error);
+    // In production, log to a proper logging service instead of console
+    if (process.env.NODE_ENV === 'development') {
+      console.error('Error loading saved workshops:', error);
+    }
   }
   return [];
 };
@@ -156,7 +165,10 @@ export const autoSaveFormData = (formData: FormData): void => {
       lastSaved: new Date().toISOString()
     }));
   } catch (error) {
-    console.error('Error auto-saving form data:', error);
+    // In production, log to a proper logging service instead of console
+    if (process.env.NODE_ENV === 'development') {
+      console.error('Error auto-saving form data:', error);
+    }
   }
 };
 
@@ -171,7 +183,10 @@ export const loadAutoSavedFormData = (): FormData | null => {
       return formData;
     }
   } catch (error) {
-    console.error('Error loading auto-saved form data:', error);
+    // In production, log to a proper logging service instead of console
+    if (process.env.NODE_ENV === 'development') {
+      console.error('Error loading auto-saved form data:', error);
+    }
   }
   return null;
 };
@@ -194,9 +209,15 @@ export const cleanupDuplicateWorkshops = (): void => {
     const cleanedWorkshops = Array.from(uniqueWorkshops.values());
     localStorage.setItem('savedWorkshops', JSON.stringify(cleanedWorkshops));
     
-    console.log(`Cleaned up workshops: ${workshops.length} -> ${cleanedWorkshops.length}`);
+    // Only log in development
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`Cleaned up workshops: ${workshops.length} -> ${cleanedWorkshops.length}`);
+    }
   } catch (error) {
-    console.error('Error cleaning up duplicate workshops:', error);
+    // In production, log to a proper logging service instead of console
+    if (process.env.NODE_ENV === 'development') {
+      console.error('Error cleaning up duplicate workshops:', error);
+    }
   }
 };
 
@@ -222,10 +243,17 @@ export const migrateDataFromOtherPorts = (): void => {
       
       // Clear session data
       sessionStorage.removeItem('workshopDataMigration');
-      console.log('Data migration completed');
+      
+      // Only log in development
+      if (process.env.NODE_ENV === 'development') {
+        console.log('Data migration completed');
+      }
     }
   } catch (error) {
-    console.error('Error migrating data:', error);
+    // In production, log to a proper logging service instead of console
+    if (process.env.NODE_ENV === 'development') {
+      console.error('Error migrating data:', error);
+    }
   }
 };
 
@@ -242,8 +270,15 @@ export const backupDataForPortChange = (): void => {
     };
     
     sessionStorage.setItem('workshopDataMigration', JSON.stringify(backupData));
-    console.log('Data backed up for port migration');
+    
+    // Only log in development
+    if (process.env.NODE_ENV === 'development') {
+      console.log('Data backed up for port migration');
+    }
   } catch (error) {
-    console.error('Error backing up data:', error);
+    // In production, log to a proper logging service instead of console
+    if (process.env.NODE_ENV === 'development') {
+      console.error('Error backing up data:', error);
+    }
   }
 };

@@ -14,6 +14,33 @@ jest.mock('../utils/workshopManager', () => ({
   cleanupDuplicateWorkshops: jest.fn(),
   migrateDataFromOtherPorts: jest.fn(),
   backupDataForPortChange: jest.fn(),
+  getSavedWorkshops: jest.fn(() => []),
+}));
+
+// Mock react-markdown
+jest.mock('react-markdown', () => {
+  return function MockReactMarkdown({ children }: { children: React.ReactNode }) {
+    return <div data-testid="markdown">{children}</div>;
+  };
+});
+
+// Mock jspdf and html2canvas
+jest.mock('jspdf', () => ({
+  __esModule: true,
+  default: jest.fn().mockImplementation(() => ({
+    save: jest.fn(),
+    addPage: jest.fn(),
+    text: jest.fn(),
+    setFontSize: jest.fn(),
+    setFont: jest.fn(),
+  })),
+}));
+
+jest.mock('html2canvas', () => ({
+  __esModule: true,
+  default: jest.fn().mockResolvedValue({
+    toDataURL: jest.fn().mockReturnValue('data:image/png;base64,mock'),
+  }),
 }));
 
 // Mock localStorage
@@ -81,7 +108,7 @@ describe('App Component', () => {
     expect(screen.getByText('Genererar din workshop...')).toBeInTheDocument();
   });
 
-  test('should save workshop when save button is clicked', async () => {
+  test('should auto-save workshop when form data changes', async () => {
     const { saveWorkshop } = require('../utils/workshopManager');
     saveWorkshop.mockReturnValue({ id: 'test-workshop-id' });
     
@@ -98,12 +125,10 @@ describe('App Component', () => {
       expect(screen.queryByText('Ingen workshop genererad än')).not.toBeInTheDocument();
     }, { timeout: 2000 });
     
-    // Click save button
-    const saveButton = screen.getByText('Spara Workshop');
-    fireEvent.click(saveButton);
-    
-    // Should call saveWorkshop
-    expect(saveWorkshop).toHaveBeenCalled();
+    // Wait for auto-save to trigger
+    await waitFor(() => {
+      expect(saveWorkshop).toHaveBeenCalled();
+    }, { timeout: 3000 });
   });
 
   test('should update form data when inputs change', () => {

@@ -17,3 +17,10 @@
   white-space: pre-wrap;
   word-wrap: break-word;
 }
+
+/* Ensure textarea elements handle multiple lines properly */
+textarea {
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}

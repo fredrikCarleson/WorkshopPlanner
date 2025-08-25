@@ -23,6 +23,9 @@ export default tseslint.config(
         'warn',
         { allowConstantExport: true },
       ],
+      // Disable problematic TypeScript rules that conflict with ESLint
+      '@typescript-eslint/no-unused-expressions': 'off',
+      'no-unused-expressions': 'off',
     },
   }
 );

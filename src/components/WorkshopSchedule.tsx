@@ -79,17 +79,24 @@ Genererad med Workshop Planner`;
   };
 
   const handleExportPDF = async () => {
-    const element = document.getElementById('workshop-content');
-    if (!element) return;
-
-    console.log('Starting PDF export...');
-    
-    // Hide elements that shouldn't be in PDF
-    const elementsToHide = document.querySelectorAll('.no-print');
-    elementsToHide.forEach(el => (el as HTMLElement).style.display = 'none');
+    if (!workshop) return;
 
     try {
-      console.log('Capturing canvas...');
+      // Only log in development
+      if (process.env.NODE_ENV === 'development') {
+        console.log('Starting PDF export...');
+      }
+
+      const element = document.getElementById('workshop-schedule');
+      if (!element) {
+        throw new Error('Workshop schedule element not found');
+      }
+
+      // Only log in development
+      if (process.env.NODE_ENV === 'development') {
+        console.log('Capturing canvas...');
+      }
+
       const canvas = await html2canvas(element, {
         scale: 2,
         useCORS: true,
@@ -97,21 +104,23 @@ Genererad med Workshop Planner`;
         backgroundColor: '#ffffff'
       });
 
-      console.log('Creating PDF...');
+      // Only log in development
+      if (process.env.NODE_ENV === 'development') {
+        console.log('Creating PDF...');
+      }
+
       const imgData = canvas.toDataURL('image/png');
       const pdf = new jsPDF('p', 'mm', 'a4');
-      
-      const imgWidth = 210; // A4 width in mm
-      const pageHeight = 295; // A4 height in mm
+      const imgWidth = 210;
+      const pageHeight = 295;
       const imgHeight = (canvas.height * imgWidth) / canvas.width;
       let heightLeft = imgHeight;
+
       let position = 0;
 
-      // Add first page
       pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
       heightLeft -= pageHeight;
 
-      // Add additional pages if needed
       while (heightLeft >= 0) {
         position = heightLeft - imgHeight;
         pdf.addPage();
@@ -119,16 +128,34 @@ Genererad med Workshop Planner`;
         heightLeft -= pageHeight;
       }
 
-      console.log('Saving PDF...');
-      pdf.save(`workshop-${workshop.duration}h-${workshop.participants}p.pdf`);
-      console.log('PDF export completed successfully');
+      // Only log in development
+      if (process.env.NODE_ENV === 'development') {
+        console.log('Saving PDF...');
+      }
+
+      const fileName = `workshop-${workshop.title.replace(/\s+/g, '-').toLowerCase()}.pdf`;
+      pdf.save(fileName);
+
+      // Only log in development
+      if (process.env.NODE_ENV === 'development') {
+        console.log('PDF export completed successfully');
+      }
+
+      // Cleanup
+      canvas.remove();
+      
+      // Only log in development
+      if (process.env.NODE_ENV === 'development') {
+        console.log('PDF export cleanup completed');
+      }
+
     } catch (error) {
-      console.error('PDF export error:', error);
-      alert('PDF-export misslyckades. Prova igen eller använd textexport istället.');
-    } finally {
-      // Show hidden elements again
-      elementsToHide.forEach(el => (el as HTMLElement).style.display = '');
-      console.log('PDF export cleanup completed');
+      // In production, log to a proper logging service instead of console
+      if (process.env.NODE_ENV === 'development') {
+        console.error('PDF export error:', error);
+      }
+      // You could show a user-friendly error message here
+      alert('Det gick inte att exportera PDF. Försök igen.');
     }
   };
 

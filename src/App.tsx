@@ -1,15 +1,16 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { WorkshopForm } from './components/WorkshopForm';
 import { WorkshopSchedule } from './components/WorkshopSchedule';
 import { StructureLibrary } from './components/StructureLibrary';
 import { WorkshopLibrary } from './components/WorkshopLibrary';
 import { NarrativeArc } from './components/NarrativeArc';
+import { ErrorBoundary } from './components/ErrorBoundary';
+import { AutoSaveIndicator } from './components/AutoSaveIndicator';
 import { Workshop, FormData, SavedWorkshop } from './types/Workshop';
-import { generateWorkshop, generateWorkshopId, generateOrLoadWorkshopSessions } from './utils/workshopCalculator';
+import { generateWorkshopId, generateOrLoadWorkshopSessions } from './utils/workshopCalculator';
 import { liberatingStructures } from './data/liberatingStructures';
 import { 
   saveWorkshop, 
-  saveDraft, 
   autoSaveFormData, 
   loadAutoSavedFormData,
   getWorkshopById,
@@ -47,10 +48,10 @@ function App() {
   const [workshop, setWorkshop] = useState<Workshop | null>(null);
   const [loading, setLoading] = useState(false);
   const [currentWorkshopId, setCurrentWorkshopId] = useState<string | null>(null);
-  const [isAutoSaving, setIsAutoSaving] = useState(false);
-  const [lastSaved, setLastSaved] = useState<Date | undefined>();
   const [isLibraryExpanded, setIsLibraryExpanded] = useState(false);
   const [isLoadingSavedWorkshop, setIsLoadingSavedWorkshop] = useState(false);
+  const [isAutoSaving, setIsAutoSaving] = useState(false);
+  const [lastSaved, setLastSaved] = useState<Date | undefined>();
   const [formData, setFormData] = useState<FormData>({
     hours: 4,
     participants: 12,
@@ -67,7 +68,7 @@ function App() {
     // Clean up any duplicate workshops first
     cleanupDuplicateWorkshops();
     loadInitialData();
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Backup data before page unload
   useEffect(() => {
@@ -133,9 +134,8 @@ function App() {
 
   // Live preview - regenerate workshop when form data changes
   useEffect(() => {
-    // Only generate live preview if we don't have a current workshop ID (i.e., not loading a saved workshop)
-    // AND we're not currently loading a saved workshop
-    if (formData.context.trim() && formData.goals.trim() && !loading && !isLoadingSavedWorkshop && !currentWorkshopId) {
+    // Generate live preview if we have context and goals, and we're not currently loading
+    if (formData.context.trim() && formData.goals.trim() && !loading && !isLoadingSavedWorkshop) {
       const timeoutId = setTimeout(() => {
         // Generate a workshop ID based on current parameters
         const workshopId = generateWorkshopId(
@@ -173,25 +173,30 @@ function App() {
         };
         
         setWorkshop(newWorkshop);
+        
+        // Auto-save the workshop if we have a current workshop ID
+        if (currentWorkshopId) {
+          setIsAutoSaving(true);
+          updateWorkshop(currentWorkshopId, { 
+            workshop: newWorkshop, 
+            formData, 
+            status: 'completed',
+            lastModified: new Date()
+          });
+          setIsAutoSaving(false);
+          setLastSaved(new Date());
+        }
       }, 500); // Small delay to prevent too frequent regenerations
 
       return () => clearTimeout(timeoutId);
     }
   }, [formData.context, formData.goals, formData.participants, formData.startTime, formData.hours, formData.purposes, loading, isLoadingSavedWorkshop, currentWorkshopId]);
 
-  // No automatic saving - workshops are only saved when explicitly requested
-
-  const handleSaveWorkshop = () => {
-    if (workshop) {
-      // Save the current workshop exactly as it is
-      if (currentWorkshopId) {
-        updateWorkshop(currentWorkshopId, { 
-          workshop, 
-          formData, 
-          status: 'completed',
-          lastModified: new Date()
-        });
-      } else {
+  // Auto-save workshop when it changes (for new workshops)
+  useEffect(() => {
+    if (workshop && !currentWorkshopId && !isLoadingSavedWorkshop) {
+      setIsAutoSaving(true);
+      const timeoutId = setTimeout(() => {
         const savedWorkshop = saveWorkshop(workshop, formData);
         setCurrentWorkshopId(savedWorkshop.id);
         
@@ -199,10 +204,14 @@ function App() {
         const newUrl = new URL(window.location.href);
         newUrl.searchParams.set('workshop', savedWorkshop.id);
         window.history.replaceState({}, '', newUrl.toString());
-      }
-      setLastSaved(new Date());
+        
+        setIsAutoSaving(false);
+        setLastSaved(new Date());
+      }, 2000); // Save after 2 seconds of inactivity
+
+      return () => clearTimeout(timeoutId);
     }
-  };
+  }, [workshop, currentWorkshopId, formData, isLoadingSavedWorkshop]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleRegenerate = () => {
     setLoading(true);
@@ -301,8 +310,9 @@ function App() {
     
     setWorkshop(updatedWorkshop);
     
-    // Auto-save the change
+    // Auto-save the change if we have a current workshop ID
     if (currentWorkshopId) {
+      setIsAutoSaving(true);
       updateWorkshop(currentWorkshopId, { 
         workshop: updatedWorkshop, 
         formData, 
@@ -312,6 +322,9 @@ function App() {
       
       // Also save the updated sessions
       saveWorkshopSessions(currentWorkshopId, updatedSessions);
+      
+      setIsAutoSaving(false);
+      setLastSaved(new Date());
     }
   };
 
@@ -357,103 +370,107 @@ function App() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="container mx-auto px-4 py-8 max-w-7xl">
-        {/* Two-pane layout */}
-        <div className="grid lg:grid-cols-5 gap-8 mb-8">
-          {/* Left Pane - Admin/Setup (2/5 width) */}
-          <div className="lg:col-span-2 space-y-6">
-            <WorkshopLibrary 
-              onLoadWorkshop={handleLoadWorkshop}
-              onNewWorkshop={handleNewWorkshop}
-            />
-            
-                         <WorkshopForm 
-               onSave={handleSaveWorkshop}
-               onRegenerate={handleRegenerate}
-               formData={formData}
-               onFormDataChange={handleFormDataChange}
-               loading={loading}
-               hasWorkshop={!!workshop}
-             />
-          </div>
+    <ErrorBoundary>
+      <div className="min-h-screen bg-gray-50">
+        <div className="container mx-auto px-4 py-8 max-w-7xl">
+          {/* Two-pane layout */}
+          <div className="grid lg:grid-cols-5 gap-8 mb-8">
+            {/* Left Pane - Admin/Setup (2/5 width) */}
+            <div className="lg:col-span-2 space-y-6">
+              <WorkshopLibrary 
+                onLoadWorkshop={handleLoadWorkshop}
+                onNewWorkshop={handleNewWorkshop}
+              />
+              
+                           <WorkshopForm 
+                onRegenerate={handleRegenerate}
+                formData={formData}
+                onFormDataChange={handleFormDataChange}
+                loading={loading}
+                hasWorkshop={!!workshop}
+              />
+            </div>
 
-          {/* Right Pane - Workshop Output (3/5 width) */}
-          <div className="lg:col-span-3">
-            <NarrativeArc />
-            
-            {loading && (
-              <div className="bg-white rounded-lg shadow-lg p-12 text-center mb-8">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-                <p className="text-gray-600">Genererar din workshop...</p>
-              </div>
-            )}
-            
-                         {workshop && !loading && (
-               <WorkshopSchedule 
-                 workshop={workshop} 
-                 onReplaceActivity={handleReplaceActivity}
-               />
-             )}
-
-            {!workshop && !loading && (
-              <div className="bg-white rounded-lg shadow-lg p-12 text-center">
-                <div className="text-gray-400 mb-4">
-                  <svg className="w-16 h-16 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                  </svg>
+            {/* Right Pane - Workshop Output (3/5 width) */}
+            <div className="lg:col-span-3">
+              <NarrativeArc />
+              
+              {loading && (
+                <div className="bg-white rounded-lg shadow-lg p-12 text-center mb-8">
+                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                  <p className="text-gray-600">Genererar din workshop...</p>
                 </div>
-                <h3 className="text-lg font-medium text-gray-900 mb-2">Ingen workshop genererad än</h3>
-                <p className="text-gray-600">
-                  Fyll i formuläret till vänster för att se förhandsvisningen av workshoppen.
-                </p>
-              </div>
-            )}
-          </div>
-        </div>
+              )}
+              
+                           {workshop && !loading && (
+                <WorkshopSchedule 
+                  workshop={workshop} 
+                  onReplaceActivity={handleReplaceActivity}
+                />
+              )}
 
-        {/* Collapsible Structure Library */}
-        <div className="no-print">
-          <div className="bg-white rounded-lg shadow-lg overflow-hidden">
-            <button
-              onClick={() => setIsLibraryExpanded(!isLibraryExpanded)}
-              className="w-full px-6 py-4 text-left bg-gray-50 hover:bg-gray-100 transition-colors flex items-center justify-between"
-            >
-              <h2 className="text-xl font-bold text-gray-900">Liberating Structures-bibliotek</h2>
-              <svg 
-                className={`w-5 h-5 text-gray-600 transition-transform ${isLibraryExpanded ? 'rotate-180' : ''}`}
-                fill="none" 
-                stroke="currentColor" 
-                viewBox="0 0 24 24"
-              >
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-              </svg>
-            </button>
-            
-            {isLibraryExpanded && (
-              <div className="p-6">
-                <StructureLibrary />
-              </div>
-            )}
+              {!workshop && !loading && (
+                <div className="bg-white rounded-lg shadow-lg p-12 text-center">
+                  <div className="text-gray-400 mb-4">
+                    <svg className="w-16 h-16 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                    </svg>
+                  </div>
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">Ingen workshop genererad än</h3>
+                  <p className="text-gray-600">
+                    Fyll i formuläret till vänster för att se förhandsvisningen av workshoppen.
+                  </p>
+                </div>
+              )}
+            </div>
           </div>
-        </div>
-        
-        <footer className="mt-12 text-center text-gray-500 text-sm">
-          <p>
-            Baserat på{' '}
-            <a 
-              href="https://www.liberatingstructures.com" 
-              target="_blank" 
-              rel="noopener noreferrer"
-              className="text-blue-600 hover:text-blue-800 underline"
-            >
-              Liberating Structures
-            </a>
-           </p>
-         </footer>
+
+          {/* Collapsible Structure Library */}
+          <div className="no-print">
+            <div className="bg-white rounded-lg shadow-lg overflow-hidden">
+              <button
+                onClick={() => setIsLibraryExpanded(!isLibraryExpanded)}
+                className="w-full px-6 py-4 text-left bg-gray-50 hover:bg-gray-100 transition-colors flex items-center justify-between"
+              >
+                <h2 className="text-xl font-bold text-gray-900">Liberating Structures-bibliotek</h2>
+                <svg 
+                  className={`w-5 h-5 text-gray-600 transition-transform ${isLibraryExpanded ? 'rotate-180' : ''}`}
+                  fill="none" 
+                  stroke="currentColor" 
+                  viewBox="0 0 24 24"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+              
+              {isLibraryExpanded && (
+                <div className="p-6">
+                  <StructureLibrary />
+                </div>
+              )}
+            </div>
+          </div>
+          
+          <footer className="mt-12 text-center text-gray-500 text-sm">
+            <p>
+              Baserat på{' '}
+              <a 
+                href="https://www.liberatingstructures.com" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="text-blue-600 hover:text-blue-800 underline"
+              >
+                Liberating Structures
+              </a>
+             </p>
+           </footer>
+         </div>
+         
+         {/* Auto-save indicator */}
+         <AutoSaveIndicator isSaving={isAutoSaving} lastSaved={lastSaved} />
        </div>
-     </div>
-   );
+    </ErrorBoundary>
+  );
 }
 
 export default App;
