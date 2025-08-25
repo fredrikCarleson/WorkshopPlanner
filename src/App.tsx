@@ -7,7 +7,7 @@ import { NarrativeArc } from './components/NarrativeArc';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { AutoSaveIndicator } from './components/AutoSaveIndicator';
 import { Workshop, FormData, SavedWorkshop } from './types/Workshop';
-import { generateWorkshopId, generateOrLoadWorkshopSessions } from './utils/workshopCalculator';
+import { generateWorkshopId, generateStableWorkshopId, generateOrLoadWorkshopSessions } from './utils/workshopCalculator';
 import { liberatingStructures } from './data/liberatingStructures';
 import { 
   saveWorkshop, 
@@ -135,10 +135,11 @@ function App() {
   // Live preview - regenerate workshop when form data changes
   useEffect(() => {
     // Generate live preview if we have context and goals, and we're not currently loading
-    if (formData.context.trim() && formData.goals.trim() && !loading && !isLoadingSavedWorkshop) {
+    // AND we don't have a current workshop ID (meaning this is a new workshop, not a loaded one)
+    if (formData.context.trim() && formData.goals.trim() && !loading && !isLoadingSavedWorkshop && !currentWorkshopId) {
       const timeoutId = setTimeout(() => {
-        // Generate a workshop ID based on current parameters
-        const workshopId = generateWorkshopId(
+        // Generate a stable workshop ID based on current parameters (for live preview)
+        const workshopId = generateStableWorkshopId(
           formData.hours, 
           formData.participants, 
           formData.purposes, 
@@ -173,19 +174,6 @@ function App() {
         };
         
         setWorkshop(newWorkshop);
-        
-        // Auto-save the workshop if we have a current workshop ID
-        if (currentWorkshopId) {
-          setIsAutoSaving(true);
-          updateWorkshop(currentWorkshopId, { 
-            workshop: newWorkshop, 
-            formData, 
-            status: 'completed',
-            lastModified: new Date()
-          });
-          setIsAutoSaving(false);
-          setLastSaved(new Date());
-        }
       }, 500); // Small delay to prevent too frequent regenerations
 
       return () => clearTimeout(timeoutId);
@@ -212,6 +200,39 @@ function App() {
       return () => clearTimeout(timeoutId);
     }
   }, [workshop, currentWorkshopId, formData, isLoadingSavedWorkshop]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Update saved workshop when form data changes (for existing workshops)
+  useEffect(() => {
+    if (currentWorkshopId && workshop && !isLoadingSavedWorkshop) {
+      setIsAutoSaving(true);
+      const timeoutId = setTimeout(() => {
+        // Update the workshop with new form data but keep the same sessions
+        const updatedWorkshop = {
+          ...workshop,
+          title: `Workshop ${formData.hours}h - ${formData.participants} deltagare`,
+          duration: formData.hours,
+          participants: formData.participants,
+          purposes: formData.purposes,
+          context: formData.context,
+          goals: formData.goals,
+          startTime: formData.startTime
+        };
+        
+        updateWorkshop(currentWorkshopId, { 
+          workshop: updatedWorkshop, 
+          formData, 
+          status: 'completed',
+          lastModified: new Date()
+        });
+        
+        setWorkshop(updatedWorkshop);
+        setIsAutoSaving(false);
+        setLastSaved(new Date());
+      }, 2000); // Save after 2 seconds of inactivity
+
+      return () => clearTimeout(timeoutId);
+    }
+  }, [formData.context, formData.goals, formData.participants, formData.startTime, formData.hours, formData.purposes, currentWorkshopId, workshop, isLoadingSavedWorkshop]);
 
   const handleRegenerate = () => {
     setLoading(true);

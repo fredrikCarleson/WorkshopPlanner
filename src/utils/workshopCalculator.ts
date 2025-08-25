@@ -177,6 +177,30 @@ export const generateWorkshopId = (
   return `${timestamp}-${shortHash}`;
 };
 
+// Generate a stable workshop ID based on parameters only (for live preview)
+export const generateStableWorkshopId = (
+  hours: number,
+  participants: number,
+  purposes: string[],
+  context: string,
+  goals: string,
+  startTime: string
+): string => {
+  // Create a hash from the parameters (same as above but without timestamp)
+  const paramsString = `${hours}-${participants}-${purposes.sort().join(',')}-${context}-${goals}-${startTime}`;
+  
+  let hash = 0;
+  for (let i = 0; i < paramsString.length; i++) {
+    const char = paramsString.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash; // Convert to 32-bit integer
+  }
+  
+  const shortHash = Math.abs(hash).toString(36).substring(0, 8);
+  
+  return `stable-${shortHash}`;
+};
+
 export const generateWorkshop = (
   hours: number, 
   participants: number, 
