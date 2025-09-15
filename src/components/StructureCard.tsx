@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Clock, Users, ChevronDown, ChevronUp, Coffee, RefreshCw } from 'lucide-react';
+import { Clock, Users, ChevronDown, ChevronUp, Coffee, RefreshCw, Edit } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import { LiberatingStructure } from '../types/Workshop';
 import { getCategoryColor, liberatingStructures } from '../data/liberatingStructures';
@@ -15,6 +15,7 @@ interface StructureCardProps {
   onReplaceActivity?: (sessionIndex: number, newStructureId: string) => void;
   isReplaceable?: boolean;
   participants?: number;
+  onEditActivity?: (sessionIndex: number) => void;
 }
 
 export const StructureCard: React.FC<StructureCardProps> = ({ 
@@ -25,7 +26,8 @@ export const StructureCard: React.FC<StructureCardProps> = ({
   sessionIndex,
   onReplaceActivity,
   isReplaceable = false,
-  participants = 12
+  participants = 12,
+  onEditActivity
 }) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const [showReplaceDropdown, setShowReplaceDropdown] = useState(false);
@@ -124,42 +126,56 @@ export const StructureCard: React.FC<StructureCardProps> = ({
           </button>
         )}
         
-        {isReplaceable && compatibleActivities.length > 0 && (
-          <div className="relative" ref={dropdownRef}>
-            <button
-              onClick={() => setShowReplaceDropdown(!showReplaceDropdown)}
-              className="no-print flex items-center text-green-600 hover:text-green-800 text-sm font-medium transition-colors duration-200"
-            >
-              <RefreshCw className="w-4 h-4 mr-1" />
-              Byt övning
-            </button>
+        {isReplaceable && (
+          <div className="flex gap-2">
+            {onEditActivity && sessionIndex !== undefined && (
+              <button
+                onClick={() => onEditActivity(sessionIndex)}
+                className="no-print flex items-center text-blue-600 hover:text-blue-800 text-sm font-medium transition-colors duration-200"
+              >
+                <Edit className="w-4 h-4 mr-1" />
+                Redigera
+              </button>
+            )}
             
-            {showReplaceDropdown && (
-              <div className="absolute top-full left-0 mt-1 bg-white border border-gray-200 rounded-md shadow-lg z-10 min-w-64">
-                <div className="p-2">
-                  <div className="text-xs font-medium text-gray-500 mb-2 px-2">
-                    Övningar från samma kategori ({structure.category}):
+            {compatibleActivities.length > 0 && (
+              <div className="relative" ref={dropdownRef}>
+                <button
+                  onClick={() => setShowReplaceDropdown(!showReplaceDropdown)}
+                  className="no-print flex items-center text-green-600 hover:text-green-800 text-sm font-medium transition-colors duration-200"
+                >
+                  <RefreshCw className="w-4 h-4 mr-1" />
+                  Byt övning
+                </button>
+                
+                {showReplaceDropdown && (
+                  <div className="absolute top-full left-0 mt-1 bg-white border border-gray-200 rounded-md shadow-lg z-10 min-w-64">
+                    <div className="p-2">
+                      <div className="text-xs font-medium text-gray-500 mb-2 px-2">
+                        Övningar från samma kategori ({structure.category}):
+                      </div>
+                      {compatibleActivities.map((activity) => {
+                        const baseDuration = activity.baseTime + (activity.scalingFactor * participants);
+                        const estimatedDuration = Math.ceil(baseDuration / 5) * 5;
+                        return (
+                          <button
+                            key={activity.id}
+                            onClick={() => handleReplaceActivity(activity.id)}
+                            className="w-full text-left p-2 hover:bg-gray-50 rounded text-sm flex items-center justify-between"
+                          >
+                            <div>
+                              <div className="font-medium text-gray-900">{activity.name}</div>
+                              <div className="text-xs text-gray-500">{activity.description}</div>
+                            </div>
+                            <div className="text-xs text-gray-400 ml-2">
+                              ~{estimatedDuration}min
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
-                  {compatibleActivities.map((activity) => {
-                    const baseDuration = activity.baseTime + (activity.scalingFactor * participants);
-                    const estimatedDuration = Math.ceil(baseDuration / 5) * 5;
-                    return (
-                      <button
-                        key={activity.id}
-                        onClick={() => handleReplaceActivity(activity.id)}
-                        className="w-full text-left p-2 hover:bg-gray-50 rounded text-sm flex items-center justify-between"
-                      >
-                        <div>
-                          <div className="font-medium text-gray-900">{activity.name}</div>
-                          <div className="text-xs text-gray-500">{activity.description}</div>
-                        </div>
-                        <div className="text-xs text-gray-400 ml-2">
-                          ~{estimatedDuration}min
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
+                )}
               </div>
             )}
           </div>
