@@ -1,9 +1,11 @@
 import React from 'react';
+import { useState } from 'react';
 import { Clock, Users, RefreshCw, Download, Target, AlertTriangle, ArrowRight, FileText } from 'lucide-react';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import { Workshop } from '../types/Workshop';
 import { StructureCard } from './StructureCard';
+import { ActivityEditModal } from './ActivityEditModal';
 import { formatTime } from '../utils/workshopCalculator';
 import { purposes } from '../data/purposes';
 
@@ -21,9 +23,12 @@ const getPhaseColor = (phase: string): string => {
 interface WorkshopScheduleProps {
   workshop: Workshop;
   onReplaceActivity: (sessionIndex: number, newStructureId: string) => void;
+  onEditActivity?: (sessionIndex: number, customData: any, newDuration?: number) => void;
 }
 
-export const WorkshopSchedule: React.FC<WorkshopScheduleProps> = ({ workshop, onReplaceActivity }) => {
+export const WorkshopSchedule: React.FC<WorkshopScheduleProps> = ({ workshop, onReplaceActivity, onEditActivity }) => {
+  const [editingSession, setEditingSession] = useState<number | null>(null);
+  
   const handleExport = () => {
     const selectedPurposeNames = workshop.purposes
       .map(id => purposes.find(p => p.id === id)?.name)
@@ -159,6 +164,18 @@ Genererad med Workshop Planner`;
     }
   };
 
+  const handleEditActivity = (sessionIndex: number) => {
+    setEditingSession(sessionIndex);
+  };
+
+  const handleSaveEdit = (sessionId: string, customData: any, newDuration?: number) => {
+    const sessionIndex = workshop.sessions.findIndex(s => s.id === sessionId);
+    if (sessionIndex !== -1 && onEditActivity) {
+      onEditActivity(sessionIndex, customData, newDuration);
+    }
+    setEditingSession(null);
+  };
+
   return (
     <div className="bg-white rounded-lg shadow-lg p-6">
       <div className="flex flex-wrap items-center justify-between mb-6">
@@ -265,6 +282,7 @@ Genererad med Workshop Planner`;
                 onReplaceActivity={onReplaceActivity}
                 isReplaceable={!['welcome', 'closing', 'short-break', 'long-break'].includes(session.structure.id)}
                 participants={workshop.participants}
+                onEditActivity={handleEditActivity}
               />
               
               <div className="mt-3 space-y-2 session-details">
@@ -314,6 +332,16 @@ Genererad med Workshop Planner`;
           <p className="text-gray-500">Inga aktiviteter kunde genereras för dessa parametrar.</p>
           <p className="text-gray-400 text-sm mt-2">Prova att ändra antalet deltagare eller workshoplängden.</p>
         </div>
+      )}
+      
+      {editingSession !== null && (
+        <ActivityEditModal
+          session={workshop.sessions[editingSession]}
+          isOpen={editingSession !== null}
+          onClose={() => setEditingSession(null)}
+          onSave={handleSaveEdit}
+          participants={workshop.participants}
+        />
       )}
     </div>
   );

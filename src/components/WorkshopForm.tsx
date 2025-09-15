@@ -51,6 +51,19 @@ export const WorkshopForm: React.FC<WorkshopFormProps> = ({ onRegenerate, formDa
 
   const handleRegenerate = (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Show warning if there are customized activities
+    const hasCustomizedActivities = false; // This would be passed as a prop in a real implementation
+    
+    if (hasCustomizedActivities) {
+      const confirmed = window.confirm(
+        'Varning: Du har redigerat några aktiviteter. Om du regenererar workshoppen kommer alla dina anpassningar att försvinna. Vill du fortsätta?'
+      );
+      if (!confirmed) {
+        return;
+      }
+    }
+    
     onRegenerate();
   };
 

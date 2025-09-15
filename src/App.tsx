@@ -349,6 +349,63 @@ function App() {
     }
   };
 
+  const handleEditActivity = (sessionIndex: number, customData: any, newDuration?: number) => {
+    if (!workshop) return;
+    
+    // Create a copy of the workshop sessions
+    const updatedSessions = [...workshop.sessions];
+    const session = updatedSessions[sessionIndex];
+    
+    // Update the session with custom data
+    updatedSessions[sessionIndex] = {
+      ...session,
+      customData,
+      isCustomized: true,
+      duration: newDuration || session.duration
+    };
+    
+    // If duration changed, recalculate times for all subsequent sessions
+    if (newDuration && newDuration !== session.duration) {
+      let currentTime = timeStringToMinutes(workshop.startTime);
+      for (let i = 0; i < updatedSessions.length; i++) {
+        const sessionToUpdate = updatedSessions[i];
+        const sessionTimes = calculateAbsoluteTimes(workshop.startTime, currentTime, sessionToUpdate.duration);
+        updatedSessions[i] = {
+          ...sessionToUpdate,
+          startTime: sessionTimes.startTime,
+          endTime: sessionTimes.endTime
+        };
+        currentTime += sessionToUpdate.duration;
+      }
+    }
+    
+    // Create updated workshop
+    const updatedWorkshop = {
+      ...workshop,
+      sessions: updatedSessions,
+      totalTime: updatedSessions.reduce((total, s) => total + s.duration, 0)
+    };
+    
+    setWorkshop(updatedWorkshop);
+    
+    // Auto-save the change if we have a current workshop ID
+    if (currentWorkshopId) {
+      setIsAutoSaving(true);
+      updateWorkshop(currentWorkshopId, { 
+        workshop: updatedWorkshop, 
+        formData, 
+        status: 'completed',
+        lastModified: new Date()
+      });
+      
+      // Also save the updated sessions
+      saveWorkshopSessions(currentWorkshopId, updatedSessions);
+      
+      setIsAutoSaving(false);
+      setLastSaved(new Date());
+    }
+  };
+
   const handleFormDataChange = (data: Partial<FormData>) => {
     setFormData(prev => ({ ...prev, ...data }));
   };
@@ -427,6 +484,7 @@ function App() {
                 <WorkshopSchedule 
                   workshop={workshop} 
                   onReplaceActivity={handleReplaceActivity}
+                  onEditActivity={handleEditActivity}
                 />
               )}
 

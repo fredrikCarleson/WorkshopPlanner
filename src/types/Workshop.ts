@@ -25,6 +25,17 @@ export interface WorkshopSession {
   mitigation: string;
   isBreak?: boolean;
   breakType?: 'short' | 'long';
+  customData?: {
+    title?: string;
+    description?: string;
+    instructions?: string;
+    purpose?: string;
+    output?: string;
+    transition?: string;
+    risks?: string;
+    mitigation?: string;
+  };
+  isCustomized?: boolean;
 }
 
 export interface Workshop {
