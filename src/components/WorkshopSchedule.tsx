@@ -278,6 +278,7 @@ Genererad med Workshop Planner`;
               <StructureCard 
                 structure={session.structure} 
                 duration={session.duration}
+                session={session}
                 sessionIndex={index}
                 onReplaceActivity={onReplaceActivity}
                 isReplaceable={!['welcome', 'closing', 'short-break', 'long-break'].includes(session.structure.id)}
@@ -290,7 +291,7 @@ Genererad med Workshop Planner`;
                   <Target className="w-4 h-4 text-blue-600 mr-2 mt-0.5 flex-shrink-0" />
                   <div>
                     <span className="text-sm font-medium text-gray-700 session-detail-label">Syfte: </span>
-                    <span className="text-sm text-gray-600">{session.purpose}</span>
+                    <span className="text-sm text-gray-600">{session.customData?.purpose || session.purpose}</span>
                   </div>
                 </div>
                 
@@ -298,27 +299,27 @@ Genererad med Workshop Planner`;
                   <ArrowRight className="w-4 h-4 text-green-600 mr-2 mt-0.5 flex-shrink-0" />
                   <div>
                     <span className="text-sm font-medium text-gray-700 session-detail-label">Output: </span>
-                    <span className="text-sm text-gray-600">{session.output}</span>
+                    <span className="text-sm text-gray-600">{session.customData?.output || session.output}</span>
                   </div>
                 </div>
                 
-                {session.risks && (
+                {(session.customData?.risks || session.risks) && (
                   <div className="flex items-start session-detail-item">
                     <AlertTriangle className="w-4 h-4 text-amber-600 mr-2 mt-0.5 flex-shrink-0" />
                     <div>
                       <span className="text-sm font-medium text-gray-700 session-detail-label">Risk: </span>
-                      <span className="text-sm text-gray-600">{session.risks}</span>
+                      <span className="text-sm text-gray-600">{session.customData?.risks || session.risks}</span>
                       <br />
                       <span className="text-sm font-medium text-gray-700 session-detail-label">Mitigering: </span>
-                      <span className="text-sm text-gray-600">{session.mitigation}</span>
+                      <span className="text-sm text-gray-600">{session.customData?.mitigation || session.mitigation}</span>
                     </div>
                   </div>
                 )}
                 
-                {session.transition && index < workshop.sessions.length - 1 && (
+                {(session.customData?.transition || session.transition) && index < workshop.sessions.length - 1 && (
                   <div className="mt-3 p-2 bg-blue-50 rounded border-l-4 border-blue-400">
                     <span className="text-sm font-medium text-blue-800">Transition till nästa aktivitet: </span>
-                    <span className="text-sm text-blue-700 italic">"{session.transition}"</span>
+                    <span className="text-sm text-blue-700 italic">"{session.customData?.transition || session.transition}"</span>
                   </div>
                 )}
               </div>

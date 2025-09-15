@@ -27,11 +27,17 @@ export const StructureCard: React.FC<StructureCardProps> = ({
   onReplaceActivity,
   isReplaceable = false,
   participants = 12,
-  onEditActivity
+  onEditActivity,
+  session
 }) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const [showReplaceDropdown, setShowReplaceDropdown] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  
+  // Use custom title if available, otherwise use structure name
+  const displayTitle = session?.customData?.title || structure.name;
+  const displayDescription = session?.customData?.description || structure.description;
+  const displayInstructions = session?.customData?.instructions || structure.instructions;
   
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -90,7 +96,12 @@ export const StructureCard: React.FC<StructureCardProps> = ({
         <div className="flex-1">
           <h3 className="font-semibold text-gray-900 mb-1">
             <span className="text-lg mr-2">{structure.icon}</span>
-            {structure.name}
+            {displayTitle}
+            {session?.isCustomized && (
+              <span className="ml-2 px-2 py-0.5 bg-blue-100 text-blue-800 text-xs rounded-full">
+                Anpassad
+              </span>
+            )}
           </h3>
           <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${getCategoryColor(structure.category)}`}>
             {structure.category}
@@ -104,7 +115,7 @@ export const StructureCard: React.FC<StructureCardProps> = ({
         )}
       </div>
       
-      <p className="text-gray-600 text-sm mb-3">{structure.description}</p>
+      <p className="text-gray-600 text-sm mb-3">{displayDescription}</p>
       
       <div className="flex gap-2 mb-3">
         {!showDetails && (
@@ -200,7 +211,7 @@ export const StructureCard: React.FC<StructureCardProps> = ({
                 li: ({children}) => <li className="text-gray-700 leading-relaxed">{children}</li>
               }}
             >
-              {structure.instructions}
+              {displayInstructions}
             </ReactMarkdown>
           </div>
         </div>

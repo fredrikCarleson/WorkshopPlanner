@@ -182,7 +182,7 @@ function App() {
 
   // Auto-save workshop when it changes (for new workshops)
   useEffect(() => {
-    if (workshop && !currentWorkshopId && !isLoadingSavedWorkshop) {
+    if (workshop && !currentWorkshopId && !isLoadingSavedWorkshop && formData.context.trim() && formData.goals.trim()) {
       setIsAutoSaving(true);
       const timeoutId = setTimeout(() => {
         const savedWorkshop = saveWorkshop(workshop, formData);

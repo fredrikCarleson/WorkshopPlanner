@@ -24,6 +24,7 @@ export interface WorkshopSession {
   risks: string;
   mitigation: string;
   isBreak?: boolean;
+  session?: WorkshopSession;
   breakType?: 'short' | 'long';
   customData?: {
     title?: string;
